@@ -13,6 +13,11 @@
 # Local config
 local.properties
 docs/
+*.keystore
+*.jks
+*.p12
+*.pem
+*.base64
 
 # Native build
 .externalNativeBuild/
