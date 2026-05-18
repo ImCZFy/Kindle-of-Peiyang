@@ -3,12 +3,14 @@ package me.tju244.kop.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Assignment
@@ -19,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -30,13 +33,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.util.Calendar
 import me.tju244.kop.RebuildApplication
+import me.tju244.kop.auth.ui.SessionUiState
 import me.tju244.kop.auth.ui.SessionViewModel
 import me.tju244.kop.tju.network.TjuExamDto
 import me.tju244.kop.tju.ui.TjuViewModel
 import me.tju244.kop.tju.ui.TjuViewModelFactory
+import me.tju244.kop.ui.liquid.lens
+import me.tju244.kop.ui.liquid.vibrancy
 import me.tju244.kop.ui.theme.RebuildTheme
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.FloatingNavigationBar
+import top.yukonga.miuix.kmp.basic.FloatingNavigationBarItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.NavigationBar
@@ -44,6 +52,13 @@ import top.yukonga.miuix.kmp.basic.NavigationBarDisplayMode
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.blur
+import top.yukonga.miuix.kmp.blur.drawBackdrop
+import top.yukonga.miuix.kmp.blur.highlight.Highlight
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.noiseDither
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.icon.extended.Months
@@ -144,7 +159,7 @@ fun KopApp(sessionVm: SessionViewModel = viewModel()) {
 private fun KopRootShell(
     selectedTab: KopTab,
     onSelectedTabChange: (KopTab) -> Unit,
-    session: me.tju244.kop.auth.ui.SessionUiState,
+    session: SessionUiState,
     sessionVm: SessionViewModel,
     onOpenCourseTable: () -> Unit,
     onOpenExams: () -> Unit,
@@ -153,51 +168,170 @@ private fun KopRootShell(
     onOpenNotificationSettings: () -> Unit,
     onOpenAbout: () -> Unit,
 ) {
-    Scaffold(
-        bottomBar = {
-            NavigationBar(mode = NavigationBarDisplayMode.IconAndText) {
-                KopTab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == tab,
-                        onClick = { onSelectedTabChange(tab) },
-                        icon = tab.icon,
-                        label = tab.label,
-                    )
+    if (session.navigationBarMode == 0) {
+        Scaffold(
+            bottomBar = {
+                NavigationBar(
+                    mode = if (session.bottomBarLabelMode == 0) {
+                        NavigationBarDisplayMode.IconOnly
+                    } else {
+                        NavigationBarDisplayMode.IconAndText
+                    },
+                ) {
+                    KopTab.entries.forEach { tab ->
+                        NavigationBarItem(
+                            selected = selectedTab == tab,
+                            onClick = { onSelectedTabChange(tab) },
+                            icon = tab.icon,
+                            label = tab.label,
+                        )
+                    }
                 }
-            }
-        },
-        contentWindowInsets = WindowInsets(0.dp),
-    ) { innerPadding ->
-        when (selectedTab) {
-            KopTab.Courses -> KopCoursesHome(
+            },
+            contentWindowInsets = WindowInsets(0.dp),
+        ) { innerPadding ->
+            KopRootContent(
+                selectedTab = selectedTab,
                 bottomPadding = innerPadding.calculateBottomPadding(),
+                session = session,
+                sessionVm = sessionVm,
                 onOpenCourseTable = onOpenCourseTable,
-            )
-            KopTab.Rooms -> StudyRoomPage(onBack = {})
-            KopTab.Grades -> KopGradesHome(
-                bottomPadding = innerPadding.calculateBottomPadding(),
                 onOpenExams = onOpenExams,
                 onOpenGpa = onOpenGpa,
-            )
-            KopTab.EntryQr -> EntryQrPage(onBack = {})
-            KopTab.Settings -> SettingsPage(
-                themeMode = session.themeMode,
-                onThemeModeChange = sessionVm::setThemeMode,
-                fontMode = session.fontMode,
-                onFontModeChange = sessionVm::setFontMode,
-                bottomBarLabelMode = session.bottomBarLabelMode,
-                onBottomBarLabelModeChange = sessionVm::setBottomBarLabelMode,
-                navigationBarMode = session.navigationBarMode,
-                onNavigationBarModeChange = sessionVm::setNavigationBarMode,
-                tabletRailPosition = session.tabletRailPosition,
-                onTabletRailPositionChange = sessionVm::setTabletRailPosition,
-                bottomBarGlassEnabled = session.bottomBarGlassEnabled,
-                onBottomBarGlassEnabledChange = sessionVm::setBottomBarGlassEnabled,
-                onBack = {},
                 onOpenTjuSettings = onOpenTjuSettings,
                 onOpenNotificationSettings = onOpenNotificationSettings,
                 onOpenAbout = onOpenAbout,
             )
+        }
+    } else {
+        val backdrop = rememberLayerBackdrop()
+        Box(Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .layerBackdrop(backdrop),
+            ) {
+                KopRootContent(
+                    selectedTab = selectedTab,
+                    bottomPadding = 116.dp,
+                    session = session,
+                    sessionVm = sessionVm,
+                    onOpenCourseTable = onOpenCourseTable,
+                    onOpenExams = onOpenExams,
+                    onOpenGpa = onOpenGpa,
+                    onOpenTjuSettings = onOpenTjuSettings,
+                    onOpenNotificationSettings = onOpenNotificationSettings,
+                    onOpenAbout = onOpenAbout,
+                )
+            }
+            FloatingKopNavigationBar(
+                selectedTab = selectedTab,
+                onSelectedTabChange = onSelectedTabChange,
+                glassEnabled = session.bottomBarGlassEnabled,
+                backdrop = backdrop,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+    }
+}
+
+@Composable
+private fun KopRootContent(
+    selectedTab: KopTab,
+    bottomPadding: Dp,
+    session: SessionUiState,
+    sessionVm: SessionViewModel,
+    onOpenCourseTable: () -> Unit,
+    onOpenExams: () -> Unit,
+    onOpenGpa: () -> Unit,
+    onOpenTjuSettings: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onOpenAbout: () -> Unit,
+) {
+    when (selectedTab) {
+        KopTab.Courses -> KopCoursesHome(
+            bottomPadding = bottomPadding,
+            onOpenCourseTable = onOpenCourseTable,
+        )
+        KopTab.Rooms -> StudyRoomPage(onBack = {})
+        KopTab.Grades -> KopGradesHome(
+            bottomPadding = bottomPadding,
+            onOpenExams = onOpenExams,
+            onOpenGpa = onOpenGpa,
+        )
+        KopTab.EntryQr -> EntryQrPage(onBack = {})
+        KopTab.Settings -> SettingsPage(
+            themeMode = session.themeMode,
+            onThemeModeChange = sessionVm::setThemeMode,
+            fontMode = session.fontMode,
+            onFontModeChange = sessionVm::setFontMode,
+            bottomBarLabelMode = session.bottomBarLabelMode,
+            onBottomBarLabelModeChange = sessionVm::setBottomBarLabelMode,
+            navigationBarMode = session.navigationBarMode,
+            onNavigationBarModeChange = sessionVm::setNavigationBarMode,
+            tabletRailPosition = session.tabletRailPosition,
+            onTabletRailPositionChange = sessionVm::setTabletRailPosition,
+            bottomBarGlassEnabled = session.bottomBarGlassEnabled,
+            onBottomBarGlassEnabledChange = sessionVm::setBottomBarGlassEnabled,
+            onBack = {},
+            onOpenTjuSettings = onOpenTjuSettings,
+            onOpenNotificationSettings = onOpenNotificationSettings,
+            onOpenAbout = onOpenAbout,
+        )
+    }
+}
+
+@Composable
+private fun FloatingKopNavigationBar(
+    selectedTab: KopTab,
+    onSelectedTabChange: (KopTab) -> Unit,
+    glassEnabled: Boolean,
+    backdrop: LayerBackdrop,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(36.dp)
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+        FloatingNavigationBar(
+            modifier = Modifier
+                .then(
+                    if (glassEnabled) {
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { shape },
+                            effects = {
+                                blur(28f)
+                                vibrancy()
+                                lens(
+                                    refractionHeight = 18f,
+                                    refractionAmount = 52f,
+                                    depthEffect = true,
+                                    chromaticAberration = 0.16f,
+                                )
+                                noiseDither(0.025f)
+                            },
+                            highlight = { Highlight.GlassStrokeMiddleLight },
+                            onDrawSurface = {
+                                drawRoundRect(Color.White.copy(alpha = 0.34f))
+                            },
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
+            color = if (glassEnabled) Color.Transparent else MiuixTheme.colorScheme.surfaceContainer,
+            cornerRadius = 36.dp,
+            shadowElevation = if (glassEnabled) 0.dp else 1.dp,
+            showDivider = glassEnabled,
+            defaultWindowInsetsPadding = true,
+        ) {
+            KopTab.entries.forEach { tab ->
+                FloatingNavigationBarItem(
+                    selected = selectedTab == tab,
+                    onClick = { onSelectedTabChange(tab) },
+                    icon = tab.icon,
+                    label = tab.label,
+                )
+            }
         }
     }
 }
