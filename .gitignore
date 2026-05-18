@@ -1,0 +1,27 @@
+# Build outputs
+**/build/
+
+# Gradle / Kotlin cache
+.gradle/
+.kotlin/
+.configuration-cache/
+
+# Android Studio
+.idea/
+*.iml
+
+# Local config
+local.properties
+docs/
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# Dumps / logs
+*.hprof
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
