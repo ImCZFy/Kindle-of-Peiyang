@@ -70,7 +70,6 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Community
-import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.icon.extended.Create
 import top.yukonga.miuix.kmp.icon.extended.Months
 import top.yukonga.miuix.kmp.icon.extended.Ok
@@ -294,7 +293,7 @@ fun SettingsPage(
                         onClick = onOpenTjuSettings,
                         startAction = {
                             Icon(
-                                imageVector = MiuixIcons.Contacts,
+                                painter = painterResource(R.drawable.ic_twt_cloud),
                                 contentDescription = null,
                                 tint = MiuixTheme.colorScheme.onBackground,
                                 modifier = Modifier.padding(end = 6.dp),

@@ -18,6 +18,7 @@ data class SessionUiState(
     val sidOrPhone: String = "",
     val password: String = "",
     val initialized: Boolean = false,
+    val oobeCompleted: Boolean = false,
     val themeMode: Int = 0,
     val fontMode: Int = 0,
     val bottomBarLabelMode: Int = 1,
@@ -47,6 +48,11 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             store.tokenFlow.collectLatest { tk ->
                 _uiState.value = _uiState.value.copy(token = tk, initialized = true)
+            }
+        }
+        viewModelScope.launch {
+            store.oobeCompletedFlow.collectLatest { completed ->
+                _uiState.value = _uiState.value.copy(oobeCompleted = completed, initialized = true)
             }
         }
         viewModelScope.launch {
@@ -318,6 +324,12 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
     fun setMiIslandDisplayMode(mode: Int) {
         viewModelScope.launch {
             store.saveMiIslandDisplayMode(mode)
+        }
+    }
+
+    fun completeOobe() {
+        viewModelScope.launch {
+            store.saveOobeCompleted(true)
         }
     }
 

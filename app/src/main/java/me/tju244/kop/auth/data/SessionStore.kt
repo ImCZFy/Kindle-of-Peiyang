@@ -17,6 +17,7 @@ class SessionStore(private val context: Context) {
     private val tokenKey = stringPreferencesKey("auth_token")
     private val accountKey = stringPreferencesKey("auth_account")
     private val userNumberKey = stringPreferencesKey("auth_user_number")
+    private val oobeCompletedKey = booleanPreferencesKey("oobe_completed")
     private val tjuUsernameKey = stringPreferencesKey("tju_username")
     private val tjuPasswordKey = stringPreferencesKey("tju_password")
     private val tjuClassesCacheKey = stringPreferencesKey("tju_classes_cache")
@@ -37,6 +38,10 @@ class SessionStore(private val context: Context) {
 
     val tokenFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
         prefs[tokenKey] ?: ""
+    }
+
+    val oobeCompletedFlow: Flow<Boolean> = context.sessionDataStore.data.map { prefs: Preferences ->
+        prefs[oobeCompletedKey] ?: false
     }
 
     val tjuUsernameFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
@@ -108,6 +113,7 @@ class SessionStore(private val context: Context) {
     }
 
     suspend fun currentToken(): String = tokenFlow.first()
+    suspend fun currentOobeCompleted(): Boolean = oobeCompletedFlow.first()
     suspend fun currentAccount(): String = context.sessionDataStore.data.map { prefs -> prefs[accountKey] ?: "" }.first()
     suspend fun currentTjuUsername(): String = tjuUsernameFlow.first()
     suspend fun currentTjuPassword(): String = tjuPasswordFlow.first()
@@ -122,6 +128,10 @@ class SessionStore(private val context: Context) {
 
     suspend fun saveToken(token: String) {
         context.sessionDataStore.edit { it[tokenKey] = token }
+    }
+
+    suspend fun saveOobeCompleted(completed: Boolean) {
+        context.sessionDataStore.edit { it[oobeCompletedKey] = completed }
     }
 
     suspend fun saveThemeMode(mode: Int) {

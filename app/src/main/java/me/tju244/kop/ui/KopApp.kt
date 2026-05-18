@@ -51,6 +51,7 @@ import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarDisplayMode
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.blur
@@ -84,6 +85,14 @@ private enum class KopPane {
     TjuDebug,
 }
 
+private fun KopTab.displayLabel(): String = when (this) {
+    KopTab.Courses -> "课程表"
+    KopTab.Rooms -> "教室"
+    KopTab.Grades -> "成绩与考试"
+    KopTab.EntryQr -> "入校码"
+    KopTab.Settings -> "设置"
+}
+
 @Composable
 fun KopApp(sessionVm: SessionViewModel = viewModel()) {
     val session by sessionVm.uiState.collectAsStateWithLifecycle()
@@ -106,7 +115,24 @@ fun KopApp(sessionVm: SessionViewModel = viewModel()) {
     BackHandler(enabled = pane != KopPane.Root) { pane = KopPane.Root }
 
     RebuildTheme(themeMode = session.themeMode, fontMode = session.fontMode) {
-        when (pane) {
+        if (!session.initialized) {
+            KopBootSplash()
+        } else if (!session.oobeCompleted) {
+            KopOobePage(
+                session = session,
+                onSidChange = sessionVm::onSidChanged,
+                onPasswordChange = sessionVm::onPasswordChanged,
+                onLogin = sessionVm::login,
+                onThemeModeChange = sessionVm::setThemeMode,
+                onFontModeChange = sessionVm::setFontMode,
+                onNavigationBarModeChange = sessionVm::setNavigationBarMode,
+                onBottomBarGlassEnabledChange = sessionVm::setBottomBarGlassEnabled,
+                onCourseNotificationEnabledChange = sessionVm::setCourseNotificationEnabled,
+                onCourseLiveUpdateEnabledChange = sessionVm::setCourseLiveUpdateEnabled,
+                onMiIslandNotificationEnabledChange = sessionVm::setMiIslandNotificationEnabled,
+                onFinish = sessionVm::completeOobe,
+            )
+        } else when (pane) {
             KopPane.CourseTable -> CourseSchedulePage(onBack = { pane = KopPane.Root })
             KopPane.Exams -> ExamSchedulePage(onBack = { pane = KopPane.Root })
             KopPane.Gpa -> GpaPage(onBack = { pane = KopPane.Root })
@@ -156,6 +182,21 @@ fun KopApp(sessionVm: SessionViewModel = viewModel()) {
 }
 
 @Composable
+private fun KopBootSplash() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MiuixTheme.colorScheme.background),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "北洋之炬",
+            color = MiuixTheme.colorScheme.onBackground,
+        )
+    }
+}
+
+@Composable
 private fun KopRootShell(
     selectedTab: KopTab,
     onSelectedTabChange: (KopTab) -> Unit,
@@ -183,7 +224,7 @@ private fun KopRootShell(
                             selected = selectedTab == tab,
                             onClick = { onSelectedTabChange(tab) },
                             icon = tab.icon,
-                            label = tab.label,
+                            label = tab.displayLabel(),
                         )
                     }
                 }
@@ -329,7 +370,7 @@ private fun FloatingKopNavigationBar(
                     selected = selectedTab == tab,
                     onClick = { onSelectedTabChange(tab) },
                     icon = tab.icon,
-                    label = tab.label,
+                    label = tab.displayLabel(),
                 )
             }
         }

@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.tju244.kop.RebuildApplication
+import me.tju244.kop.R
 import me.tju244.kop.auth.ui.SessionUiState
 import me.tju244.kop.tju.ui.TjuViewModel
 import me.tju244.kop.tju.ui.TjuViewModelFactory
@@ -48,7 +50,6 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.icon.extended.Hide
 import top.yukonga.miuix.kmp.icon.extended.Months
 import top.yukonga.miuix.kmp.icon.extended.Send
@@ -120,7 +121,7 @@ fun AccountSettingsPage(
                         summary = if (session.token.isBlank()) "用于同步天外天个人中心相关服务" else "账号信息已保存在本地",
                         startAction = {
                             Icon(
-                                imageVector = MiuixIcons.Contacts,
+                                painter = painterResource(R.drawable.ic_twt_cloud),
                                 contentDescription = null,
                                 tint = MiuixTheme.colorScheme.onBackground,
                                 modifier = Modifier.padding(end = 16.dp),
