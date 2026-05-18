@@ -1,18 +1,30 @@
-name: Android Release
+name: Release
 
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Mark the GitHub release as prerelease"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
   packages: read
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
+    name: Build release artifacts
     runs-on: ubuntu-latest
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
@@ -27,23 +39,26 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Grant execute permission to gradlew
+      - name: Make Gradle executable
         run: chmod +x ./gradlew
 
-      - name: Prepare signing keystore (optional)
+      - name: Prepare signing keystore
         id: signing
         shell: bash
         run: |
-          if [[ -n "${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}" && -n "${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}" && -n "${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" && -n "${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}" ]]; then
-            KEYSTORE_PATH="$RUNNER_TEMP/release.keystore"
-            echo "${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_PATH"
+          if [[ -n "${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}" \
+             && -n "${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}" \
+             && -n "${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" \
+             && -n "${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}" ]]; then
+            key_store="$RUNNER_TEMP/release.keystore"
+            printf '%s' "${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}" | base64 --decode > "$key_store"
             echo "enabled=true" >> "$GITHUB_OUTPUT"
-            echo "store_file=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
+            echo "store_file=$key_store" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build release APK and AAB
+      - name: Build release APK and bundle
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,7 +71,7 @@ jobs:
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-artifacts
+          name: kop-release-${{ github.ref_name }}
           path: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/*.aab
@@ -66,8 +81,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ inputs.prerelease || false }}
+          generate_release_notes: true
           files: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/*.aab
-          generate_release_notes: true
-
