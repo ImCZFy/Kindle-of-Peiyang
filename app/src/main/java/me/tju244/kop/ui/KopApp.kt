@@ -18,13 +18,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,7 +33,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -65,6 +66,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -423,21 +426,22 @@ private fun FloatingKopNavigationBar(
     } else {
         MiuixTheme.colorScheme.surfaceContainer
     }
-    var contentWidthPx by remember { mutableStateOf(0f) }
     var totalWidthPx by remember { mutableStateOf(0f) }
     var dragOffsetPx by remember { mutableStateOf(0f) }
     var dragging by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
     val stretchAnim = remember { Animatable(0f) }
     val offsetAnimation = remember { Animatable(0f) }
     val indicatorPosition = remember { Animatable(selectedTab.ordinal.toFloat()) }
     val tabCount = KopTab.entries.size
-    val tabWidthPx = if (contentWidthPx > 0f) contentWidthPx / tabCount else 0f
+    val tabItemWidth = if (showLabels) 76.dp else 62.dp
+    val tabWidthPx = with(density) { tabItemWidth.toPx() }
     val pressProgress by animateFloatAsState(
         targetValue = if (dragging) 1f else 0f,
         animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f),
         label = "kop-floating-press",
     )
-    val sidePaddingTarget = if (showLabels) 10.dp else 28.dp
+    val sidePaddingTarget = if (showLabels) 12.dp else 28.dp
     val startPadding by animateDpAsState(sidePaddingTarget, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-start")
     val endPadding by animateDpAsState(sidePaddingTarget, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-end")
     val itemHeight by animateDpAsState(56.dp, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-item-height")
@@ -459,6 +463,13 @@ private fun FloatingKopNavigationBar(
             )
         }
     }
+    LaunchedEffect(selectedTab.ordinal, showLabels, scrollState.maxValue) {
+        if (showLabels && scrollState.maxValue > 0) {
+            val target = (selectedTab.ordinal * tabWidthPx - tabWidthPx).roundToInt()
+                .coerceIn(0, scrollState.maxValue)
+            scrollState.animateScrollTo(target)
+        }
+    }
     val indicatorIndex by remember(selectedTab, dragging, dragOffsetPx, tabWidthPx) {
         derivedStateOf {
             if (dragging && tabWidthPx > 0f) {
@@ -473,7 +484,8 @@ private fun FloatingKopNavigationBar(
         modifier = modifier
             .navigationBarsPadding()
             .padding(start = startPadding, end = endPadding, top = 12.dp, bottom = 12.dp)
-            .width(IntrinsicSize.Min)
+            .fillMaxWidth()
+            .widthIn(max = 420.dp)
             .height(64.dp)
             .pointerInput(selectedTab, tabWidthPx, tabCount) {
                 detectHorizontalDragGestures(
@@ -530,16 +542,16 @@ private fun FloatingKopNavigationBar(
                     }
                     change.consume()
                 }
-            }
-            .width(IntrinsicSize.Min),
+            },
         contentAlignment = Alignment.CenterStart,
     ) {
         @Composable
-        fun RowScope.TabItems(tint: Color) {
+        fun TabItems(tint: Color) {
             KopTab.entries.forEach { tab ->
                 Column(
                     modifier = Modifier
-                        .defaultMinSize(minWidth = if (showLabels) 64.dp else 62.dp)
+                        .width(tabItemWidth)
+                        .defaultMinSize(minWidth = tabItemWidth)
                         .clip(CircleShape)
                         .clickable {
                             scope.launch {
@@ -551,8 +563,7 @@ private fun FloatingKopNavigationBar(
                             }
                             onSelectedTabChange(tab)
                         }
-                        .fillMaxSize()
-                        .weight(1f)
+                        .height(56.dp)
                         .graphicsLayer {
                             val scale = if (glassActive) lerp(1f, 1.18f, pressProgress) else 1f
                             scaleX = scale
@@ -572,7 +583,11 @@ private fun FloatingKopNavigationBar(
                             text = tab.displayLabel(),
                             color = tint,
                             fontSize = 11.sp,
+                            lineHeight = 12.sp,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
@@ -583,9 +598,9 @@ private fun FloatingKopNavigationBar(
             Modifier
                 .onGloballyPositioned { coords ->
                     totalWidthPx = coords.size.width.toFloat()
-                    contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
                 }
                 .graphicsLayer { translationX = panelOffset }
+                .horizontalScroll(scrollState)
                 .clickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                     indication = null,
@@ -631,7 +646,12 @@ private fun FloatingKopNavigationBar(
                     .padding(horizontal = 4.dp)
                     .graphicsLayer {
                         val progressOffset = indicatorIndex * tabWidthPx
-                        translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
+                        val scrollOffset = scrollState.value.toFloat()
+                        translationX = if (isLtr) {
+                            progressOffset - scrollOffset + panelOffset
+                        } else {
+                            -progressOffset + scrollOffset + panelOffset
+                        }
                     }
                     .then(
                         if (glassActive) {
@@ -666,7 +686,7 @@ private fun FloatingKopNavigationBar(
                         },
                     )
                     .height(itemHeight)
-                    .width(with(density) { tabWidthPx.toDp() }),
+                    .width(tabItemWidth),
             )
         }
 
@@ -676,6 +696,7 @@ private fun FloatingKopNavigationBar(
                 .alpha(0f)
                 .kyantLayerBackdrop(tabsBackdrop)
                 .graphicsLayer { translationX = panelOffset }
+                .horizontalScroll(scrollState, enabled = false)
                 .then(
                     if (glassActive) {
                         Modifier.kyantDrawBackdrop(
@@ -705,6 +726,7 @@ private fun FloatingKopNavigationBar(
             Modifier
                 .clearAndSetSemantics {}
                 .graphicsLayer { translationX = panelOffset }
+                .horizontalScroll(scrollState, enabled = false)
                 .height(64.dp)
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically,
