@@ -18,14 +18,16 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,9 +35,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -66,8 +66,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -186,7 +184,9 @@ fun KopApp(sessionVm: SessionViewModel = viewModel()) {
         } else {
             AnimatedContent(
                 targetState = pane,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MiuixTheme.colorScheme.background),
                 transitionSpec = {
                     val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
                     (slideInHorizontally(tween(260, easing = FastOutSlowInEasing)) { it * dir } + fadeIn(tween(200))) togetherWith
@@ -362,7 +362,9 @@ private fun KopRootContent(
 ) {
     AnimatedContent(
         targetState = selectedTab,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MiuixTheme.colorScheme.background),
         transitionSpec = {
             val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
             (slideInHorizontally(tween(280, easing = FastOutSlowInEasing)) { it * dir } + fadeIn(tween(220))) togetherWith
@@ -421,25 +423,24 @@ private fun FloatingKopNavigationBar(
     } else {
         MiuixTheme.colorScheme.surfaceContainer
     }
+    var contentWidthPx by remember { mutableStateOf(0f) }
     var totalWidthPx by remember { mutableStateOf(0f) }
     var dragOffsetPx by remember { mutableStateOf(0f) }
     var dragging by remember { mutableStateOf(false) }
-    val scrollState = rememberScrollState()
     val stretchAnim = remember { Animatable(0f) }
     val offsetAnimation = remember { Animatable(0f) }
     val indicatorPosition = remember { Animatable(selectedTab.ordinal.toFloat()) }
     val tabCount = KopTab.entries.size
-    val tabItemWidth = if (showLabels) 76.dp else 62.dp
-    val tabWidthPx = with(density) { tabItemWidth.toPx() }
+    val tabWidthPx = if (contentWidthPx > 0f) contentWidthPx / tabCount else 0f
     val pressProgress by animateFloatAsState(
         targetValue = if (dragging) 1f else 0f,
         animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f),
         label = "kop-floating-press",
     )
-    val sidePaddingTarget = if (showLabels) 12.dp else 28.dp
-    val startPadding by animateDpAsState(sidePaddingTarget, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-start")
-    val endPadding by animateDpAsState(sidePaddingTarget, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-end")
-    val itemHeight by animateDpAsState(56.dp, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-item-height")
+    val animationSpec = tween<Dp>(durationMillis = 360, easing = FastOutSlowInEasing)
+    val startPadding by animateDpAsState(28.dp, animationSpec = animationSpec, label = "kop-floating-start")
+    val endPadding by animateDpAsState(28.dp, animationSpec = animationSpec, label = "kop-floating-end")
+    val itemHeight by animateDpAsState(56.dp, animationSpec = animationSpec, label = "kop-floating-item-height")
     val panelOffset by remember(density) {
         derivedStateOf {
             if (totalWidthPx == 0f) {
@@ -458,13 +459,6 @@ private fun FloatingKopNavigationBar(
             )
         }
     }
-    LaunchedEffect(selectedTab.ordinal, showLabels, scrollState.maxValue) {
-        if (showLabels && scrollState.maxValue > 0) {
-            val target = (selectedTab.ordinal * tabWidthPx - tabWidthPx).roundToInt()
-                .coerceIn(0, scrollState.maxValue)
-            scrollState.animateScrollTo(target)
-        }
-    }
     val indicatorIndex by remember(selectedTab, dragging, dragOffsetPx, tabWidthPx) {
         derivedStateOf {
             if (dragging && tabWidthPx > 0f) {
@@ -479,8 +473,7 @@ private fun FloatingKopNavigationBar(
         modifier = modifier
             .navigationBarsPadding()
             .padding(start = startPadding, end = endPadding, top = 12.dp, bottom = 12.dp)
-            .fillMaxWidth()
-            .widthIn(max = 420.dp)
+            .width(IntrinsicSize.Min)
             .height(64.dp)
             .pointerInput(selectedTab, tabWidthPx, tabCount) {
                 detectHorizontalDragGestures(
@@ -537,16 +530,16 @@ private fun FloatingKopNavigationBar(
                     }
                     change.consume()
                 }
-            },
+            }
+            .width(IntrinsicSize.Min),
         contentAlignment = Alignment.CenterStart,
     ) {
         @Composable
-        fun TabItems(tint: Color) {
+        fun RowScope.TabItems(tint: Color) {
             KopTab.entries.forEach { tab ->
                 Column(
                     modifier = Modifier
-                        .width(tabItemWidth)
-                        .defaultMinSize(minWidth = tabItemWidth)
+                        .defaultMinSize(minWidth = 76.dp)
                         .clip(CircleShape)
                         .clickable {
                             scope.launch {
@@ -558,7 +551,8 @@ private fun FloatingKopNavigationBar(
                             }
                             onSelectedTabChange(tab)
                         }
-                        .height(56.dp)
+                        .fillMaxHeight()
+                        .weight(1f)
                         .graphicsLayer {
                             val scale = if (glassActive) lerp(1f, 1.18f, pressProgress) else 1f
                             scaleX = scale
@@ -578,11 +572,7 @@ private fun FloatingKopNavigationBar(
                             text = tab.displayLabel(),
                             color = tint,
                             fontSize = 11.sp,
-                            lineHeight = 12.sp,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
@@ -593,9 +583,9 @@ private fun FloatingKopNavigationBar(
             Modifier
                 .onGloballyPositioned { coords ->
                     totalWidthPx = coords.size.width.toFloat()
+                    contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
                 }
                 .graphicsLayer { translationX = panelOffset }
-                .horizontalScroll(scrollState)
                 .clickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                     indication = null,
@@ -632,57 +622,7 @@ private fun FloatingKopNavigationBar(
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TabItems(Color.Transparent)
-        }
-
-        if (tabWidthPx > 0f) {
-            Box(
-                Modifier
-                    .padding(horizontal = 4.dp)
-                    .graphicsLayer {
-                        val progressOffset = indicatorIndex * tabWidthPx
-                        val scrollOffset = scrollState.value.toFloat()
-                        translationX = if (isLtr) {
-                            progressOffset - scrollOffset + panelOffset
-                        } else {
-                            -progressOffset + scrollOffset + panelOffset
-                        }
-                    }
-                    .then(
-                        if (glassActive) {
-                            Modifier.kyantDrawBackdrop(
-                                backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
-                                shape = { CircleShape },
-                                effects = {
-                                    kyantLens(10.dp.toPx() * pressProgress, 14.dp.toPx() * pressProgress, true)
-                                },
-                                highlight = { KyantHighlight.Default.copy(alpha = pressProgress) },
-                                shadow = { Shadow(alpha = pressProgress) },
-                                innerShadow = {
-                                    KyantInnerShadow(
-                                        radius = 8.dp * pressProgress,
-                                        alpha = pressProgress,
-                                    )
-                                },
-                                layerBlock = {
-                                    scaleX = 1f + stretchAnim.value / size.width
-                                    scaleY = 1f - (stretchAnim.value / size.width * 0.24f).coerceIn(0f, 0.16f)
-                                },
-                                onDrawSurface = {
-                                    drawRect(
-                                        color = if (isLight) Color.Black.copy(0.1f) else Color.White.copy(0.1f),
-                                        alpha = 1f - pressProgress,
-                                    )
-                                    drawRect(Color.Black.copy(alpha = 0.03f * pressProgress))
-                                },
-                            )
-                        } else {
-                            Modifier.background(MiuixTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
-                        },
-                    )
-                    .height(itemHeight)
-                    .width(tabItemWidth),
-            )
+            TabItems(MiuixTheme.colorScheme.onSurface)
         }
 
         Row(
@@ -691,7 +631,6 @@ private fun FloatingKopNavigationBar(
                 .alpha(0f)
                 .kyantLayerBackdrop(tabsBackdrop)
                 .graphicsLayer { translationX = panelOffset }
-                .horizontalScroll(scrollState, enabled = false)
                 .then(
                     if (glassActive) {
                         Modifier.kyantDrawBackdrop(
@@ -717,16 +656,50 @@ private fun FloatingKopNavigationBar(
             TabItems(MiuixTheme.colorScheme.onSurface)
         }
 
-        Row(
-            Modifier
-                .clearAndSetSemantics {}
-                .graphicsLayer { translationX = panelOffset }
-                .horizontalScroll(scrollState, enabled = false)
-                .height(64.dp)
-                .padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TabItems(MiuixTheme.colorScheme.onSurface)
+        if (tabWidthPx > 0f) {
+            Box(
+                Modifier
+                    .padding(horizontal = 4.dp)
+                    .graphicsLayer {
+                        val progressOffset = indicatorIndex * tabWidthPx
+                        translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
+                    }
+                    .then(
+                        if (glassActive) {
+                            Modifier.kyantDrawBackdrop(
+                                backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                                shape = { CircleShape },
+                                effects = {
+                                    kyantLens(10.dp.toPx() * pressProgress, 14.dp.toPx() * pressProgress, true)
+                                },
+                                highlight = { KyantHighlight.Default.copy(alpha = pressProgress) },
+                                shadow = { Shadow(alpha = pressProgress) },
+                                innerShadow = {
+                                    KyantInnerShadow(
+                                        radius = 8.dp * pressProgress,
+                                        alpha = pressProgress,
+                                    )
+                                },
+                                layerBlock = {
+                                    scaleX = 1f + stretchAnim.value / size.width
+                                    scaleY = 1f - (stretchAnim.value / size.width * 0.24f).coerceIn(0f, 0.16f)
+                                },
+                                onDrawSurface = {
+                                    val progress = pressProgress
+                                    drawRect(
+                                        color = if (isLight) Color.Black.copy(0.1f) else Color.White.copy(0.1f),
+                                        alpha = 1f - progress,
+                                    )
+                                    drawRect(Color.Black.copy(alpha = 0.03f * progress))
+                                },
+                            )
+                        } else {
+                            Modifier.background(MiuixTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
+                        },
+                    )
+                    .height(itemHeight)
+                    .width(with(density) { tabWidthPx.toDp() }),
+            )
         }
     }
 }
