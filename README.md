@@ -57,6 +57,10 @@ app/src/main/java/me/tju244/kop/
 - GitHub: [ImCZFy/Kindle-of-Peiyang](https://github.com/ImCZFy/Kindle-of-Peiyang)
 - Issues: [问题反馈](https://github.com/ImCZFy/Kindle-of-Peiyang/issues)
 
+## 致谢
+
+- [twtstudio/WePeiYang-Flutter](https://github.com/twtstudio/WePeiYang-Flutter/)：天外天工作室维护的微北洋 Flutter 客户端，为校园服务功能和体验设计提供了重要参考。
+
 ---
 
 最后更新：2026 年 5 月 18 日

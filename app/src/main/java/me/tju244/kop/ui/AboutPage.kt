@@ -392,6 +392,14 @@ private val OpenSourceProjects = listOf(
         url = "https://github.com/miuix-kotlin-multiplatform/miuix",
     ),
     OpenSourceProject(
+        name = "微北洋 Flutter 客户端",
+        summary = "天外天工作室维护的微北洋 Flutter 客户端",
+        description = "提供微北洋移动端功能设计和校园服务实现参考，KOP 的校园教务体验延续了相关开源项目的探索。",
+        usage = "功能设计与校园服务实现参考",
+        license = "GPL-3.0 license",
+        url = "https://github.com/twtstudio/WePeiYang-Flutter/",
+    ),
+    OpenSourceProject(
         name = "AndroidX Compose",
         summary = "Android 声明式 UI 工具包",
         description = "用于构建页面、列表、动画、图片和输入控件等核心界面能力。",
