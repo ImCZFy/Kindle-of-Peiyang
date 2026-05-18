@@ -35,7 +35,7 @@ fun BackdropEffectScope.lens(
     } else {
         RoundedRectRefractionShader
     }
-    val key = if (chromaticAberration > 0f) "LakeLiquidLensDispersion" else "LakeLiquidLens"
+    val key = if (chromaticAberration > 0f) "KopLiquidLensDispersion" else "KopLiquidLens"
 
     val scale = downscaleFactor.coerceAtLeast(1).toFloat()
     runtimeShaderEffect(

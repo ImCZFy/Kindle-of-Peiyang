@@ -15,11 +15,6 @@ private val Context.sessionDataStore by preferencesDataStore(name = "session")
 
 class SessionStore(private val context: Context) {
     private val tokenKey = stringPreferencesKey("auth_token")
-    private val lakeTokenKey = stringPreferencesKey("lake_token")
-    private val lakeUidKey = stringPreferencesKey("lake_uid")
-    private val lakeAvatarKey = stringPreferencesKey("lake_avatar")
-    private val lakeNicknameKey = stringPreferencesKey("lake_nickname")
-    private val lakeUsernameKey = stringPreferencesKey("lake_username")
     private val accountKey = stringPreferencesKey("auth_account")
     private val userNumberKey = stringPreferencesKey("auth_user_number")
     private val tjuUsernameKey = stringPreferencesKey("tju_username")
@@ -32,8 +27,6 @@ class SessionStore(private val context: Context) {
     private val tabletRailPositionKey = intPreferencesKey("tablet_rail_position")
     private val bottomBarGlassEnabledKey = booleanPreferencesKey("bottom_bar_glass_enabled")
     private val studyRoomColumnsKey = intPreferencesKey("study_room_columns")
-    private val oobeCompletedKey = booleanPreferencesKey("oobe_completed")
-    private val forumNotificationEnabledKey = booleanPreferencesKey("forum_notification_enabled")
     private val courseNotificationEnabledKey = booleanPreferencesKey("course_notification_enabled")
     private val courseLiveUpdateEnabledKey = booleanPreferencesKey("course_live_update_enabled")
     private val miIslandNotificationEnabledKey = booleanPreferencesKey("mi_island_notification_enabled")
@@ -44,26 +37,6 @@ class SessionStore(private val context: Context) {
 
     val tokenFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
         prefs[tokenKey] ?: ""
-    }
-
-    val lakeTokenFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
-        prefs[lakeTokenKey] ?: ""
-    }
-
-    val lakeUidFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
-        prefs[lakeUidKey] ?: ""
-    }
-
-    val lakeAvatarFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
-        prefs[lakeAvatarKey] ?: ""
-    }
-
-    val lakeNicknameFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
-        prefs[lakeNicknameKey] ?: ""
-    }
-
-    val lakeUsernameFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
-        prefs[lakeUsernameKey] ?: ""
     }
 
     val tjuUsernameFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
@@ -106,14 +79,6 @@ class SessionStore(private val context: Context) {
         (prefs[studyRoomColumnsKey] ?: 1).coerceIn(1, 2)
     }
 
-    val oobeCompletedFlow: Flow<Boolean> = context.sessionDataStore.data.map { prefs: Preferences ->
-        prefs[oobeCompletedKey] ?: false
-    }
-
-    val forumNotificationEnabledFlow: Flow<Boolean> = context.sessionDataStore.data.map { prefs: Preferences ->
-        prefs[forumNotificationEnabledKey] ?: true
-    }
-
     val courseNotificationEnabledFlow: Flow<Boolean> = context.sessionDataStore.data.map { prefs: Preferences ->
         prefs[courseNotificationEnabledKey] ?: true
     }
@@ -143,17 +108,10 @@ class SessionStore(private val context: Context) {
     }
 
     suspend fun currentToken(): String = tokenFlow.first()
-    suspend fun currentLakeToken(): String = lakeTokenFlow.first()
-    suspend fun currentLakeUid(): Long? = lakeUidFlow.first().toLongOrNull()
-    suspend fun currentLakeAvatar(): String = lakeAvatarFlow.first()
-    suspend fun currentLakeNickname(): String = lakeNicknameFlow.first()
-    suspend fun currentLakeUsername(): String = lakeUsernameFlow.first()
     suspend fun currentAccount(): String = context.sessionDataStore.data.map { prefs -> prefs[accountKey] ?: "" }.first()
     suspend fun currentTjuUsername(): String = tjuUsernameFlow.first()
     suspend fun currentTjuPassword(): String = tjuPasswordFlow.first()
     suspend fun currentTjuClassesCache(): String = tjuClassesCacheFlow.first()
-    suspend fun currentOobeCompleted(): Boolean = oobeCompletedFlow.first()
-    suspend fun currentForumNotificationEnabled(): Boolean = forumNotificationEnabledFlow.first()
     suspend fun currentCourseNotificationEnabled(): Boolean = courseNotificationEnabledFlow.first()
     suspend fun currentCourseLiveUpdateEnabled(): Boolean = courseLiveUpdateEnabledFlow.first()
     suspend fun currentMiIslandNotificationEnabled(): Boolean = miIslandNotificationEnabledFlow.first()
@@ -164,19 +122,6 @@ class SessionStore(private val context: Context) {
 
     suspend fun saveToken(token: String) {
         context.sessionDataStore.edit { it[tokenKey] = token }
-    }
-
-    suspend fun saveLakeToken(token: String) {
-        context.sessionDataStore.edit { it[lakeTokenKey] = token }
-    }
-
-    suspend fun saveLakeIdentity(uid: Long?, avatar: String, nickname: String, username: String = "") {
-        context.sessionDataStore.edit {
-            uid?.let { value -> it[lakeUidKey] = value.toString() }
-            if (avatar.isNotBlank()) it[lakeAvatarKey] = avatar
-            if (nickname.isNotBlank()) it[lakeNicknameKey] = nickname
-            if (username.isNotBlank()) it[lakeUsernameKey] = username
-        }
     }
 
     suspend fun saveThemeMode(mode: Int) {
@@ -238,14 +183,6 @@ class SessionStore(private val context: Context) {
         context.sessionDataStore.edit { it[studyRoomColumnsKey] = columns.coerceIn(1, 2) }
     }
 
-    suspend fun saveOobeCompleted(completed: Boolean) {
-        context.sessionDataStore.edit { it[oobeCompletedKey] = completed }
-    }
-
-    suspend fun saveForumNotificationEnabled(enabled: Boolean) {
-        context.sessionDataStore.edit { it[forumNotificationEnabledKey] = enabled }
-    }
-
     suspend fun saveCourseNotificationEnabled(enabled: Boolean) {
         context.sessionDataStore.edit { it[courseNotificationEnabledKey] = enabled }
     }
@@ -277,11 +214,6 @@ class SessionStore(private val context: Context) {
     suspend fun clear() {
         context.sessionDataStore.edit {
             it.remove(tokenKey)
-            it.remove(lakeTokenKey)
-            it.remove(lakeUidKey)
-            it.remove(lakeAvatarKey)
-            it.remove(lakeNicknameKey)
-            it.remove(lakeUsernameKey)
             it.remove(accountKey)
             it.remove(userNumberKey)
             it.remove(tjuUsernameKey)

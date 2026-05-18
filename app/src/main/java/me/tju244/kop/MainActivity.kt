@@ -10,7 +10,6 @@ import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import me.tju244.kop.notification.RebornNotifications
-import me.tju244.kop.ui.ImageMemoryCache
 import me.tju244.kop.ui.AppDeepLinks
 import me.tju244.kop.ui.KopApp
 
@@ -19,8 +18,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         RebornNotifications.ensureChannels(this)
         requestNotificationPermissionIfNeeded()
-        ImageMemoryCache.setDiskCacheDir(cacheDir)
-        ImageMemoryCache.clear()
         setContent {
             KopApp()
         }

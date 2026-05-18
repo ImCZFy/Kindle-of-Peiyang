@@ -14,48 +14,22 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import me.tju244.kop.MainActivity
 import me.tju244.kop.R
-import me.tju244.kop.lake.network.LakeMessageCountUi
 import me.tju244.kop.notification.miui.MiSuperIslandBridge
 import me.tju244.kop.ui.AppDeepLinks
 
 object RebornNotifications {
-    const val CHANNEL_FORUM = "forum_messages"
     const val CHANNEL_COURSE = "course_reminders"
-    private const val FORUM_NOTIFICATION_ID = 244001
     const val COURSE_NOTIFICATION_ID = 244002
 
     fun ensureChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java)
         val channels = listOf(
-            NotificationChannel(CHANNEL_FORUM, "论坛通知", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "求实论坛的新回复、点赞和系统通知"
-            },
             NotificationChannel(CHANNEL_COURSE, "课程提醒", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "即将上课提醒和课程 Live Update"
             },
         )
         manager.createNotificationChannels(channels)
-    }
-
-    fun notifyForumUnread(context: Context, count: LakeMessageCountUi) {
-        if (count.total <= 0 || !canPostNotifications(context)) return
-        ensureChannels(context)
-        val content = buildList {
-            if (count.reply > 0) add("${count.reply} 条回复")
-            if (count.floor > 0) add("${count.floor} 条楼中楼")
-            if (count.like > 0) add("${count.like} 个赞")
-            if (count.notice > 0) add("${count.notice} 条通知")
-        }.joinToString("、")
-        val notification = NotificationCompat.Builder(context, CHANNEL_FORUM)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("求实论坛有新消息")
-            .setContentText(content.ifBlank { "你有新的论坛通知" })
-            .setContentIntent(mainActivityIntent(context))
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
-        NotificationManagerCompat.from(context).notify(FORUM_NOTIFICATION_ID, notification)
     }
 
     fun notifyCourseReminder(

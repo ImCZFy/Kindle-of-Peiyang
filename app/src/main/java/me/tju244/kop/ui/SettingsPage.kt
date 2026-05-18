@@ -289,8 +289,8 @@ fun SettingsPage(
                         .fillMaxWidth(),
                 ) {
                     ArrowPreference(
-                        title = "教务网账号设置",
-                        summary = "绑定天津大学教务网账号以使用课程表、成绩等功能",
+                        title = "账号设置",
+                        summary = "天外天个人中心账号与教务网账号",
                         onClick = onOpenTjuSettings,
                         startAction = {
                             Icon(
@@ -327,8 +327,6 @@ fun SettingsPage(
 
 @Composable
 fun NotificationSettingsPage(
-    forumNotificationEnabled: Boolean,
-    onForumNotificationEnabledChange: (Boolean) -> Unit,
     courseNotificationEnabled: Boolean,
     onCourseNotificationEnabledChange: (Boolean) -> Unit,
     courseLiveUpdateEnabled: Boolean,

@@ -24,14 +24,12 @@ data class SessionUiState(
     val navigationBarMode: Int = 1, // 0 fixed, 1 floating
     val tabletRailPosition: Int = 0, // 0 left, 1 right
     val bottomBarGlassEnabled: Boolean = true,
-    val forumNotificationEnabled: Boolean = true,
     val courseNotificationEnabled: Boolean = true,
     val courseLiveUpdateEnabled: Boolean = true,
     val miIslandNotificationEnabled: Boolean = false,
     val miIslandBypassEnabled: Boolean = false,
     val miIslandAuthMode: Int = 0,
     val miIslandDisplayMode: Int = 2,
-    val oobeCompleted: Boolean = false,
     val loading: Boolean = false,
     val error: String? = null,
 )
@@ -79,16 +77,6 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             store.bottomBarGlassEnabledFlow.collectLatest { enabled ->
                 _uiState.value = _uiState.value.copy(bottomBarGlassEnabled = enabled)
-            }
-        }
-        viewModelScope.launch {
-            store.oobeCompletedFlow.collectLatest { completed ->
-                _uiState.value = _uiState.value.copy(oobeCompleted = completed)
-            }
-        }
-        viewModelScope.launch {
-            store.forumNotificationEnabledFlow.collectLatest { enabled ->
-                _uiState.value = _uiState.value.copy(forumNotificationEnabled = enabled)
             }
         }
         viewModelScope.launch {
@@ -289,18 +277,6 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
     fun setBottomBarGlassEnabled(enabled: Boolean) {
         viewModelScope.launch {
             store.saveBottomBarGlassEnabled(enabled)
-        }
-    }
-
-    fun completeOobe() {
-        viewModelScope.launch {
-            store.saveOobeCompleted(true)
-        }
-    }
-
-    fun setForumNotificationEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            store.saveForumNotificationEnabled(enabled)
         }
     }
 

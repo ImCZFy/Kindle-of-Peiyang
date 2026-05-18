@@ -63,7 +63,7 @@ private enum class KopPane {
     CourseTable,
     Exams,
     Gpa,
-    TjuSettings,
+    AccountSettings,
     NotificationSettings,
     About,
     TjuDebug,
@@ -95,13 +95,16 @@ fun KopApp(sessionVm: SessionViewModel = viewModel()) {
             KopPane.CourseTable -> CourseSchedulePage(onBack = { pane = KopPane.Root })
             KopPane.Exams -> ExamSchedulePage(onBack = { pane = KopPane.Root })
             KopPane.Gpa -> GpaPage(onBack = { pane = KopPane.Root })
-            KopPane.TjuSettings -> TjuSettingsPage(
+            KopPane.AccountSettings -> AccountSettingsPage(
+                session = session,
+                onSidChange = sessionVm::onSidChanged,
+                onPasswordChange = sessionVm::onPasswordChanged,
+                onLogin = sessionVm::login,
+                onLogout = sessionVm::logout,
                 onBack = { pane = KopPane.Root },
                 onOpenDebug = { pane = KopPane.TjuDebug },
             )
             KopPane.NotificationSettings -> NotificationSettingsPage(
-                forumNotificationEnabled = false,
-                onForumNotificationEnabledChange = {},
                 courseNotificationEnabled = session.courseNotificationEnabled,
                 onCourseNotificationEnabledChange = sessionVm::setCourseNotificationEnabled,
                 courseLiveUpdateEnabled = session.courseLiveUpdateEnabled,
@@ -117,7 +120,7 @@ fun KopApp(sessionVm: SessionViewModel = viewModel()) {
                 onBack = { pane = KopPane.Root },
             )
             KopPane.About -> AboutPage(onBack = { pane = KopPane.Root })
-            KopPane.TjuDebug -> TjuDebugPage(onBack = { pane = KopPane.TjuSettings })
+            KopPane.TjuDebug -> TjuDebugPage(onBack = { pane = KopPane.AccountSettings })
             KopPane.Root -> KopRootShell(
                 selectedTab = selectedTab,
                 onSelectedTabChange = {
@@ -129,7 +132,7 @@ fun KopApp(sessionVm: SessionViewModel = viewModel()) {
                 onOpenCourseTable = { pane = KopPane.CourseTable },
                 onOpenExams = { pane = KopPane.Exams },
                 onOpenGpa = { pane = KopPane.Gpa },
-                onOpenTjuSettings = { pane = KopPane.TjuSettings },
+                onOpenTjuSettings = { pane = KopPane.AccountSettings },
                 onOpenNotificationSettings = { pane = KopPane.NotificationSettings },
                 onOpenAbout = { pane = KopPane.About },
             )
