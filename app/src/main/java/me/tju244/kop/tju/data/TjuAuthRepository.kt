@@ -86,7 +86,7 @@ class TjuAuthRepository(
     }
 
     private suspend fun fetch(username: String, password: String): TjuClassesBundle {
-        debug("请求北洋之炬教务聚合接口")
+        debug("请求 TJU 教务聚合接口")
         val root = api.getClasses(username, password)
         val code = root.intOrNull("code") ?: root.intOrNull("error_code") ?: 200
         val dataElement = root.get("data")

@@ -42,7 +42,7 @@ class StudyRoomRepository(
 
     private suspend inline fun <reified T> getList(path: String): List<T> {
         val token = sessionStore.currentToken()
-        if (token.isBlank()) throw IllegalStateException("请先登录北洋之炬账号")
+        if (token.isBlank()) throw IllegalStateException("请先登录天外天个人中心账号")
         val request = Request.Builder()
             .url(BASE_URL.trimEnd('/') + path)
             .header("DOMAIN", Env.AUTH_DOMAIN)

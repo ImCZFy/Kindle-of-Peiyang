@@ -242,7 +242,7 @@ fun AboutPage(onBack: () -> Unit) {
                             Column(modifier = Modifier.padding(top = 14.dp)) {
                                 SmallTitle(text = "项目")
                                 Card(modifier = Modifier.fillMaxWidth()) {
-                                    BasicComponent(title = "Kindle of Peiyang", summary = "面向天津大学教务场景的北洋之炬客户端")
+                                    BasicComponent(title = "Kindle of Peiyang", summary = "面向天津大学学生的教务综合工具，提供课程表、成绩查询、考试安排、入校码和教室查询等功能。")
                                     ArrowPreference(
                                         title = "GitHub 项目地址",
                                         summary = "github.com/ImCZFy/Kindle-of-Peiyang",
@@ -513,8 +513,8 @@ private fun AboutHeroHeader(
                 .fillMaxWidth(),
         ) {
             BasicComponent(
-                title = "学在北洋，一手掌握",
-                summary = "当前版本聚焦校园服务与基础应用框架，后续模块会继续按 Miuix 页面结构迁移。",
+                title = "Light up your campus life with Kindle.",
+                summary = "校园聚合服务，尽在 KOP。",
             )
         }
     }

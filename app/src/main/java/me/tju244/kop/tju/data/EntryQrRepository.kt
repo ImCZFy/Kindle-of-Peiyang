@@ -15,7 +15,7 @@ class EntryQrRepository(
         val sid = sessionStore.currentUserNumber()
             .ifBlank { sessionStore.currentAccount().takeIf { it.isStudentNumber() }.orEmpty() }
             .ifBlank { sessionStore.currentTjuUsername().takeIf { it.isStudentNumber() }.orEmpty() }
-        if (sid.isBlank()) throw IllegalStateException("请先重新登录北洋之炬账号以同步学号")
+        if (sid.isBlank()) throw IllegalStateException("请先重新登录天外天个人中心或教务网账号以同步学号")
         val query = "method=getAccountQRcodeInfo&ID_NUMBER=$sid"
         val encryptedPath = query.tripleDesHex()
         val request = Request.Builder()
