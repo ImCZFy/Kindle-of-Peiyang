@@ -1,6 +1,7 @@
 package me.tju244.kop.ui
 
 import android.os.Build
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -8,6 +9,11 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -77,6 +84,7 @@ import com.kyant.backdrop.effects.vibrancy as kyantVibrancy
 import com.kyant.backdrop.highlight.Highlight as KyantHighlight
 import com.kyant.backdrop.shadow.InnerShadow as KyantInnerShadow
 import com.kyant.backdrop.shadow.Shadow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import kotlin.math.abs
@@ -174,51 +182,64 @@ fun KopApp(sessionVm: SessionViewModel = viewModel()) {
                 onMiIslandNotificationEnabledChange = sessionVm::setMiIslandNotificationEnabled,
                 onFinish = sessionVm::completeOobe,
             )
-        } else when (pane) {
-            KopPane.CourseTable -> CourseSchedulePage(onBack = { pane = KopPane.Root })
-            KopPane.Exams -> ExamSchedulePage(onBack = { pane = KopPane.Root })
-            KopPane.Gpa -> GpaPage(onBack = { pane = KopPane.Root })
-            KopPane.AccountSettings -> AccountSettingsPage(
-                session = session,
-                onSidChange = sessionVm::onSidChanged,
-                onPasswordChange = sessionVm::onPasswordChanged,
-                onLogin = sessionVm::login,
-                onLogout = sessionVm::logout,
-                onBack = { pane = KopPane.Root },
-                onOpenDebug = { pane = KopPane.TjuDebug },
-            )
-            KopPane.NotificationSettings -> NotificationSettingsPage(
-                courseNotificationEnabled = session.courseNotificationEnabled,
-                onCourseNotificationEnabledChange = sessionVm::setCourseNotificationEnabled,
-                courseLiveUpdateEnabled = session.courseLiveUpdateEnabled,
-                onCourseLiveUpdateEnabledChange = sessionVm::setCourseLiveUpdateEnabled,
-                miIslandNotificationEnabled = session.miIslandNotificationEnabled,
-                onMiIslandNotificationEnabledChange = sessionVm::setMiIslandNotificationEnabled,
-                miIslandBypassEnabled = session.miIslandBypassEnabled,
-                onMiIslandBypassEnabledChange = sessionVm::setMiIslandBypassEnabled,
-                miIslandAuthMode = session.miIslandAuthMode,
-                onMiIslandAuthModeChange = sessionVm::setMiIslandAuthMode,
-                miIslandDisplayMode = session.miIslandDisplayMode,
-                onMiIslandDisplayModeChange = sessionVm::setMiIslandDisplayMode,
-                onBack = { pane = KopPane.Root },
-            )
-            KopPane.About -> AboutPage(onBack = { pane = KopPane.Root })
-            KopPane.TjuDebug -> TjuDebugPage(onBack = { pane = KopPane.AccountSettings })
-            KopPane.Root -> KopRootShell(
-                selectedTab = selectedTab,
-                onSelectedTabChange = {
-                    selectedTab = it
-                    pane = KopPane.Root
+        } else {
+            AnimatedContent(
+                targetState = pane,
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                    (slideInHorizontally(tween(260, easing = FastOutSlowInEasing)) { it * dir } + fadeIn(tween(200))) togetherWith
+                        (slideOutHorizontally(tween(260, easing = FastOutSlowInEasing)) { -it * dir } + fadeOut(tween(150)))
                 },
-                session = session,
-                sessionVm = sessionVm,
-                onOpenCourseTable = { pane = KopPane.CourseTable },
-                onOpenExams = { pane = KopPane.Exams },
-                onOpenGpa = { pane = KopPane.Gpa },
-                onOpenTjuSettings = { pane = KopPane.AccountSettings },
-                onOpenNotificationSettings = { pane = KopPane.NotificationSettings },
-                onOpenAbout = { pane = KopPane.About },
-            )
+                label = "kop-pane-transition",
+            ) { currentPane ->
+                when (currentPane) {
+                    KopPane.CourseTable -> CourseSchedulePage(onBack = { pane = KopPane.Root })
+                    KopPane.Exams -> ExamSchedulePage(onBack = { pane = KopPane.Root })
+                    KopPane.Gpa -> GpaPage(onBack = { pane = KopPane.Root })
+                    KopPane.AccountSettings -> AccountSettingsPage(
+                        session = session,
+                        onSidChange = sessionVm::onSidChanged,
+                        onPasswordChange = sessionVm::onPasswordChanged,
+                        onLogin = sessionVm::login,
+                        onLogout = sessionVm::logout,
+                        onBack = { pane = KopPane.Root },
+                        onOpenDebug = { pane = KopPane.TjuDebug },
+                    )
+                    KopPane.NotificationSettings -> NotificationSettingsPage(
+                        courseNotificationEnabled = session.courseNotificationEnabled,
+                        onCourseNotificationEnabledChange = sessionVm::setCourseNotificationEnabled,
+                        courseLiveUpdateEnabled = session.courseLiveUpdateEnabled,
+                        onCourseLiveUpdateEnabledChange = sessionVm::setCourseLiveUpdateEnabled,
+                        miIslandNotificationEnabled = session.miIslandNotificationEnabled,
+                        onMiIslandNotificationEnabledChange = sessionVm::setMiIslandNotificationEnabled,
+                        miIslandBypassEnabled = session.miIslandBypassEnabled,
+                        onMiIslandBypassEnabledChange = sessionVm::setMiIslandBypassEnabled,
+                        miIslandAuthMode = session.miIslandAuthMode,
+                        onMiIslandAuthModeChange = sessionVm::setMiIslandAuthMode,
+                        miIslandDisplayMode = session.miIslandDisplayMode,
+                        onMiIslandDisplayModeChange = sessionVm::setMiIslandDisplayMode,
+                        onBack = { pane = KopPane.Root },
+                    )
+                    KopPane.About -> AboutPage(onBack = { pane = KopPane.Root })
+                    KopPane.TjuDebug -> TjuDebugPage(onBack = { pane = KopPane.AccountSettings })
+                    KopPane.Root -> KopRootShell(
+                        selectedTab = selectedTab,
+                        onSelectedTabChange = {
+                            selectedTab = it
+                            pane = KopPane.Root
+                        },
+                        session = session,
+                        sessionVm = sessionVm,
+                        onOpenCourseTable = { pane = KopPane.CourseTable },
+                        onOpenExams = { pane = KopPane.Exams },
+                        onOpenGpa = { pane = KopPane.Gpa },
+                        onOpenTjuSettings = { pane = KopPane.AccountSettings },
+                        onOpenNotificationSettings = { pane = KopPane.NotificationSettings },
+                        onOpenAbout = { pane = KopPane.About },
+                    )
+                }
+            }
         }
     }
 }
@@ -338,36 +359,47 @@ private fun KopRootContent(
     onOpenNotificationSettings: () -> Unit,
     onOpenAbout: () -> Unit,
 ) {
-    when (selectedTab) {
-        KopTab.Courses -> KopCoursesHome(
-            bottomPadding = bottomPadding,
-            onOpenCourseTable = onOpenCourseTable,
-        )
-        KopTab.Rooms -> StudyRoomPage(onBack = {})
-        KopTab.Grades -> KopGradesHome(
-            bottomPadding = bottomPadding,
-            onOpenExams = onOpenExams,
-            onOpenGpa = onOpenGpa,
-        )
-        KopTab.EntryQr -> EntryQrPage(onBack = {})
-        KopTab.Settings -> SettingsPage(
-            themeMode = session.themeMode,
-            onThemeModeChange = sessionVm::setThemeMode,
-            fontMode = session.fontMode,
-            onFontModeChange = sessionVm::setFontMode,
-            bottomBarLabelMode = session.bottomBarLabelMode,
-            onBottomBarLabelModeChange = sessionVm::setBottomBarLabelMode,
-            navigationBarMode = session.navigationBarMode,
-            onNavigationBarModeChange = sessionVm::setNavigationBarMode,
-            tabletRailPosition = session.tabletRailPosition,
-            onTabletRailPositionChange = sessionVm::setTabletRailPosition,
-            bottomBarGlassEnabled = session.bottomBarGlassEnabled,
-            onBottomBarGlassEnabledChange = sessionVm::setBottomBarGlassEnabled,
-            onBack = {},
-            onOpenTjuSettings = onOpenTjuSettings,
-            onOpenNotificationSettings = onOpenNotificationSettings,
-            onOpenAbout = onOpenAbout,
-        )
+    AnimatedContent(
+        targetState = selectedTab,
+        modifier = Modifier.fillMaxSize(),
+        transitionSpec = {
+            val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
+            (slideInHorizontally(tween(280, easing = FastOutSlowInEasing)) { it * dir } + fadeIn(tween(220))) togetherWith
+                (slideOutHorizontally(tween(280, easing = FastOutSlowInEasing)) { -it * dir } + fadeOut(tween(170)))
+        },
+        label = "kop-tab-transition",
+    ) { tab ->
+        when (tab) {
+            KopTab.Courses -> KopCoursesHome(
+                bottomPadding = bottomPadding,
+                onOpenCourseTable = onOpenCourseTable,
+            )
+            KopTab.Rooms -> StudyRoomPage(onBack = {})
+            KopTab.Grades -> KopGradesHome(
+                bottomPadding = bottomPadding,
+                onOpenExams = onOpenExams,
+                onOpenGpa = onOpenGpa,
+            )
+            KopTab.EntryQr -> EntryQrPage(onBack = {})
+            KopTab.Settings -> SettingsPage(
+                themeMode = session.themeMode,
+                onThemeModeChange = sessionVm::setThemeMode,
+                fontMode = session.fontMode,
+                onFontModeChange = sessionVm::setFontMode,
+                bottomBarLabelMode = session.bottomBarLabelMode,
+                onBottomBarLabelModeChange = sessionVm::setBottomBarLabelMode,
+                navigationBarMode = session.navigationBarMode,
+                onNavigationBarModeChange = sessionVm::setNavigationBarMode,
+                tabletRailPosition = session.tabletRailPosition,
+                onTabletRailPositionChange = sessionVm::setTabletRailPosition,
+                bottomBarGlassEnabled = session.bottomBarGlassEnabled,
+                onBottomBarGlassEnabledChange = sessionVm::setBottomBarGlassEnabled,
+                onBack = {},
+                onOpenTjuSettings = onOpenTjuSettings,
+                onOpenNotificationSettings = onOpenNotificationSettings,
+                onOpenAbout = onOpenAbout,
+            )
+        }
     }
 }
 
@@ -678,8 +710,17 @@ private fun KopCoursesHome(bottomPadding: Dp, onOpenCourseTable: () -> Unit) {
     val customCoursesJson by app.sessionStore.customCoursesFlow.collectAsStateWithLifecycle(initialValue = "[]")
     val courses = remember(ui.courses, customCoursesJson) { ui.courses + customCoursesJson.decodeCustomCourses() }
     val currentWeek = rememberCurrentTeachingWeek(courses.maxTeachingWeek())
-    val todayCourses = remember(courses, currentWeek) {
-        courses.activeSlots(currentWeek).filter { it.arrange.weekday == kopTodayWeekday() }
+    val nowMillis by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            value = System.currentTimeMillis()
+            delay(30_000L)
+        }
+    }
+    val todayCourses = remember(courses, currentWeek, nowMillis) {
+        courses.activeSlots(currentWeek)
+            .filter { it.arrange.weekday == kopTodayWeekday() }
+            .filter { it.homeStatus(nowMillis) != HomeCourseStatus.Finished }
+            .sortedBy { it.arrange.unitList.minOrNull() ?: Int.MAX_VALUE }
     }
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -716,16 +757,17 @@ private fun KopCoursesHome(bottomPadding: Dp, onOpenCourseTable: () -> Unit) {
                         BasicComponent(title = "今日无课", summary = "可以安心安排自己的时间")
                     } else {
                         todayCourses.forEach { slot ->
+                            val status = slot.homeStatus(nowMillis)
                             BasicComponent(
                                 title = slot.title,
-                                summary = listOf(slot.displayTime, slot.arrange.location)
+                                summary = listOf(status.label, slot.displayTime, slot.arrange.location)
                                     .filter { it.isNotBlank() }
                                     .joinToString(" · "),
                                 startAction = {
                                     Icon(
                                         MiuixIcons.Months,
                                         contentDescription = null,
-                                        tint = MiuixTheme.colorScheme.primary,
+                                        tint = if (status == HomeCourseStatus.Ongoing) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onBackground,
                                         modifier = Modifier.padding(end = 16.dp),
                                     )
                                 },
@@ -752,6 +794,44 @@ private fun KopCoursesHome(bottomPadding: Dp, onOpenCourseTable: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+private enum class HomeCourseStatus(val label: String) {
+    Ongoing("正在上课"),
+    Upcoming("即将上课"),
+    Finished("已上完"),
+}
+
+private fun CourseSlot.homeStatus(nowMillis: Long): HomeCourseStatus {
+    val now = Calendar.getInstance().apply { timeInMillis = nowMillis }
+    val nowMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+    val start = arrange.unitList.minOrNull()?.let { kopSectionTimeMinutes(it)?.first }
+    val end = arrange.unitList.maxOrNull()?.let { kopSectionTimeMinutes(it)?.second }
+    return when {
+        start == null || end == null -> HomeCourseStatus.Upcoming
+        nowMinutes in start until end -> HomeCourseStatus.Ongoing
+        nowMinutes >= end -> HomeCourseStatus.Finished
+        else -> HomeCourseStatus.Upcoming
+    }
+}
+
+private fun kopSectionTimeMinutes(section: Int): Pair<Int, Int>? {
+    fun minutes(hour: Int, minute: Int) = hour * 60 + minute
+    return when (section) {
+        1 -> minutes(8, 30) to minutes(9, 15)
+        2 -> minutes(9, 20) to minutes(10, 5)
+        3 -> minutes(10, 25) to minutes(11, 10)
+        4 -> minutes(11, 15) to minutes(12, 0)
+        5 -> minutes(13, 30) to minutes(14, 15)
+        6 -> minutes(14, 20) to minutes(15, 5)
+        7 -> minutes(15, 25) to minutes(16, 10)
+        8 -> minutes(16, 15) to minutes(17, 0)
+        9 -> minutes(18, 30) to minutes(19, 15)
+        10 -> minutes(19, 20) to minutes(20, 5)
+        11 -> minutes(20, 10) to minutes(20, 55)
+        12 -> minutes(21, 0) to minutes(21, 45)
+        else -> null
     }
 }
 
