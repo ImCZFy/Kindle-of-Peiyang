@@ -437,8 +437,9 @@ private fun FloatingKopNavigationBar(
         animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f),
         label = "kop-floating-press",
     )
-    val startPadding by animateDpAsState(28.dp, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-start")
-    val endPadding by animateDpAsState(28.dp, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-end")
+    val sidePaddingTarget = if (showLabels) 10.dp else 28.dp
+    val startPadding by animateDpAsState(sidePaddingTarget, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-start")
+    val endPadding by animateDpAsState(sidePaddingTarget, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-end")
     val itemHeight by animateDpAsState(56.dp, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-item-height")
     val panelOffset by remember(density) {
         derivedStateOf {
@@ -538,7 +539,7 @@ private fun FloatingKopNavigationBar(
             KopTab.entries.forEach { tab ->
                 Column(
                     modifier = Modifier
-                        .defaultMinSize(minWidth = if (showLabels) 76.dp else 62.dp)
+                        .defaultMinSize(minWidth = if (showLabels) 64.dp else 62.dp)
                         .clip(CircleShape)
                         .clickable {
                             scope.launch {
@@ -624,37 +625,6 @@ private fun FloatingKopNavigationBar(
             TabItems(MiuixTheme.colorScheme.onSurface)
         }
 
-        Row(
-            Modifier
-                .clearAndSetSemantics {}
-                .alpha(0f)
-                .kyantLayerBackdrop(tabsBackdrop)
-                .graphicsLayer { translationX = panelOffset }
-                .then(
-                    if (glassActive) {
-                        Modifier.kyantDrawBackdrop(
-                            backdrop = backdrop,
-                            shape = { CircleShape },
-                            effects = {
-                                kyantVibrancy()
-                                kyantBlur(8.dp.toPx())
-                                kyantLens(24.dp.toPx() * pressProgress, 24.dp.toPx() * pressProgress)
-                            },
-                            highlight = { KyantHighlight.Default.copy(alpha = pressProgress) },
-                            onDrawSurface = { drawRect(containerColor) },
-                        )
-                    } else {
-                        Modifier
-                    },
-                )
-                .height(itemHeight)
-                .padding(horizontal = 4.dp)
-                .graphicsLayer(colorFilter = ColorFilter.tint(MiuixTheme.colorScheme.primary)),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TabItems(MiuixTheme.colorScheme.onSurface)
-        }
-
         if (tabWidthPx > 0f) {
             Box(
                 Modifier
@@ -698,6 +668,48 @@ private fun FloatingKopNavigationBar(
                     .height(itemHeight)
                     .width(with(density) { tabWidthPx.toDp() }),
             )
+        }
+
+        Row(
+            Modifier
+                .clearAndSetSemantics {}
+                .alpha(0f)
+                .kyantLayerBackdrop(tabsBackdrop)
+                .graphicsLayer { translationX = panelOffset }
+                .then(
+                    if (glassActive) {
+                        Modifier.kyantDrawBackdrop(
+                            backdrop = backdrop,
+                            shape = { CircleShape },
+                            effects = {
+                                kyantVibrancy()
+                                kyantBlur(8.dp.toPx())
+                                kyantLens(24.dp.toPx() * pressProgress, 24.dp.toPx() * pressProgress)
+                            },
+                            highlight = { KyantHighlight.Default.copy(alpha = pressProgress) },
+                            onDrawSurface = { drawRect(containerColor) },
+                        )
+                    } else {
+                        Modifier
+                    },
+                )
+                .height(itemHeight)
+                .padding(horizontal = 4.dp)
+                .graphicsLayer(colorFilter = ColorFilter.tint(MiuixTheme.colorScheme.primary)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TabItems(MiuixTheme.colorScheme.onSurface)
+        }
+
+        Row(
+            Modifier
+                .clearAndSetSemantics {}
+                .graphicsLayer { translationX = panelOffset }
+                .height(64.dp)
+                .padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TabItems(MiuixTheme.colorScheme.onSurface)
         }
     }
 }
@@ -760,15 +772,22 @@ private fun KopCoursesHome(bottomPadding: Dp, onOpenCourseTable: () -> Unit) {
                             val status = slot.homeStatus(nowMillis)
                             BasicComponent(
                                 title = slot.title,
-                                summary = listOf(status.label, slot.displayTime, slot.arrange.location)
+                                summary = listOf(slot.displayTime, slot.arrange.location)
                                     .filter { it.isNotBlank() }
                                     .joinToString(" · "),
                                 startAction = {
                                     Icon(
                                         MiuixIcons.Months,
                                         contentDescription = null,
-                                        tint = if (status == HomeCourseStatus.Ongoing) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onBackground,
+                                        tint = MiuixTheme.colorScheme.primary,
                                         modifier = Modifier.padding(end = 16.dp),
+                                    )
+                                },
+                                endActions = {
+                                    Text(
+                                        text = status.label,
+                                        color = if (status == HomeCourseStatus.Ongoing) Color(0xFF2FD66B) else MiuixTheme.colorScheme.primary,
+                                        fontSize = 12.sp,
                                     )
                                 },
                             )
