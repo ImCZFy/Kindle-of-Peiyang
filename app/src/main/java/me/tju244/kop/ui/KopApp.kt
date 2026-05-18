@@ -1,15 +1,35 @@
 package me.tju244.kop.ui
 
+import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apartment
@@ -17,34 +37,61 @@ import androidx.compose.material.icons.outlined.Assignment
 import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.fastCoerceIn
+import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop as kyantLayerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberKyantLayerBackdrop
+import com.kyant.backdrop.drawBackdrop as kyantDrawBackdrop
+import com.kyant.backdrop.effects.blur as kyantBlur
+import com.kyant.backdrop.effects.lens as kyantLens
+import com.kyant.backdrop.effects.vibrancy as kyantVibrancy
+import com.kyant.backdrop.highlight.Highlight as KyantHighlight
+import com.kyant.backdrop.shadow.InnerShadow as KyantInnerShadow
+import com.kyant.backdrop.shadow.Shadow
+import kotlinx.coroutines.launch
 import java.util.Calendar
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlin.math.sign
 import me.tju244.kop.RebuildApplication
 import me.tju244.kop.auth.ui.SessionUiState
 import me.tju244.kop.auth.ui.SessionViewModel
 import me.tju244.kop.tju.network.TjuExamDto
 import me.tju244.kop.tju.ui.TjuViewModel
 import me.tju244.kop.tju.ui.TjuViewModelFactory
-import me.tju244.kop.ui.liquid.lens
-import me.tju244.kop.ui.liquid.vibrancy
+import me.tju244.kop.ui.theme.LocalAppDarkMode
 import me.tju244.kop.ui.theme.RebuildTheme
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.FloatingNavigationBar
-import top.yukonga.miuix.kmp.basic.FloatingNavigationBarItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.NavigationBar
@@ -53,12 +100,7 @@ import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.blur.LayerBackdrop
-import top.yukonga.miuix.kmp.blur.blur
-import top.yukonga.miuix.kmp.blur.drawBackdrop
-import top.yukonga.miuix.kmp.blur.highlight.Highlight
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.noiseDither
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Contacts
@@ -245,12 +287,18 @@ private fun KopRootShell(
             )
         }
     } else {
-        val backdrop = rememberLayerBackdrop()
+        val backdrop = rememberKyantLayerBackdrop()
         Box(Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .layerBackdrop(backdrop),
+                    .then(
+                        if (session.bottomBarGlassEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            Modifier.kyantLayerBackdrop(backdrop)
+                        } else {
+                            Modifier
+                        },
+                    ),
             ) {
                 KopRootContent(
                     selectedTab = selectedTab,
@@ -269,6 +317,7 @@ private fun KopRootShell(
                 selectedTab = selectedTab,
                 onSelectedTabChange = onSelectedTabChange,
                 glassEnabled = session.bottomBarGlassEnabled,
+                showLabels = session.bottomBarLabelMode == 1,
                 backdrop = backdrop,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
@@ -327,52 +376,296 @@ private fun FloatingKopNavigationBar(
     selectedTab: KopTab,
     onSelectedTabChange: (KopTab) -> Unit,
     glassEnabled: Boolean,
-    backdrop: LayerBackdrop,
+    showLabels: Boolean,
+    backdrop: Backdrop,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(36.dp)
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-        FloatingNavigationBar(
-            modifier = Modifier
-                .then(
-                    if (glassEnabled) {
-                        Modifier.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { shape },
-                            effects = {
-                                blur(28f)
-                                vibrancy()
-                                lens(
-                                    refractionHeight = 18f,
-                                    refractionAmount = 52f,
-                                    depthEffect = true,
-                                    chromaticAberration = 0.16f,
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val isLight = !LocalAppDarkMode.current
+    val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
+    val glassActive = glassEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val tabsBackdrop = rememberKyantLayerBackdrop()
+    val containerColor = if (glassActive) {
+        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.40f)
+    } else {
+        MiuixTheme.colorScheme.surfaceContainer
+    }
+    var contentWidthPx by remember { mutableStateOf(0f) }
+    var totalWidthPx by remember { mutableStateOf(0f) }
+    var dragOffsetPx by remember { mutableStateOf(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    val stretchAnim = remember { Animatable(0f) }
+    val offsetAnimation = remember { Animatable(0f) }
+    val indicatorPosition = remember { Animatable(selectedTab.ordinal.toFloat()) }
+    val tabCount = KopTab.entries.size
+    val tabWidthPx = if (contentWidthPx > 0f) contentWidthPx / tabCount else 0f
+    val pressProgress by animateFloatAsState(
+        targetValue = if (dragging) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f),
+        label = "kop-floating-press",
+    )
+    val startPadding by animateDpAsState(28.dp, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-start")
+    val endPadding by animateDpAsState(28.dp, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-end")
+    val itemHeight by animateDpAsState(56.dp, animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing), label = "kop-floating-item-height")
+    val panelOffset by remember(density) {
+        derivedStateOf {
+            if (totalWidthPx == 0f) {
+                0f
+            } else {
+                val fraction = (offsetAnimation.value / totalWidthPx).fastCoerceIn(-1f, 1f)
+                with(density) { 4.dp.toPx() * fraction.sign * FastOutSlowInEasing.transform(abs(fraction)) }
+            }
+        }
+    }
+    LaunchedEffect(selectedTab.ordinal, dragging) {
+        if (!dragging) {
+            indicatorPosition.animateTo(
+                selectedTab.ordinal.toFloat(),
+                animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+            )
+        }
+    }
+    val indicatorIndex by remember(selectedTab, dragging, dragOffsetPx, tabWidthPx) {
+        derivedStateOf {
+            if (dragging && tabWidthPx > 0f) {
+                (selectedTab.ordinal.toFloat() + dragOffsetPx / tabWidthPx).coerceIn(0f, (tabCount - 1).toFloat())
+            } else {
+                indicatorPosition.value.coerceIn(0f, (tabCount - 1).toFloat())
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(start = startPadding, end = endPadding, top = 12.dp, bottom = 12.dp)
+            .width(IntrinsicSize.Min)
+            .height(64.dp)
+            .pointerInput(selectedTab, tabWidthPx, tabCount) {
+                detectHorizontalDragGestures(
+                    onDragStart = {
+                        dragging = true
+                        dragOffsetPx = 0f
+                        scope.launch { stretchAnim.snapTo(0f) }
+                    },
+                    onDragEnd = {
+                        val endIndex = indicatorIndex.coerceIn(0f, (tabCount - 1).toFloat())
+                        val targetIndex = endIndex.roundToInt().coerceIn(0, tabCount - 1)
+                        dragging = false
+                        dragOffsetPx = 0f
+                        scope.launch {
+                            stretchAnim.animateTo(0f, animationSpec = spring(dampingRatio = 0.58f, stiffness = 300f))
+                            offsetAnimation.animateTo(0f, spring(dampingRatio = 0.58f, stiffness = 300f))
+                        }
+                        KopTab.entries.getOrNull(targetIndex)?.let { target ->
+                            scope.launch {
+                                indicatorPosition.stop()
+                                indicatorPosition.snapTo(endIndex)
+                                indicatorPosition.animateTo(
+                                    target.ordinal.toFloat(),
+                                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 560f),
                                 )
-                                noiseDither(0.025f)
+                            }
+                            if (target != selectedTab) onSelectedTabChange(target)
+                        }
+                    },
+                    onDragCancel = {
+                        dragging = false
+                        dragOffsetPx = 0f
+                        scope.launch {
+                            stretchAnim.animateTo(0f, animationSpec = spring(dampingRatio = 0.58f, stiffness = 360f))
+                            offsetAnimation.animateTo(0f, spring(dampingRatio = 0.58f, stiffness = 300f))
+                        }
+                        scope.launch {
+                            indicatorPosition.stop()
+                            indicatorPosition.animateTo(
+                                selectedTab.ordinal.toFloat(),
+                                animationSpec = spring(dampingRatio = 0.72f, stiffness = 560f),
+                            )
+                        }
+                    },
+                ) { change, dragAmount ->
+                    if (tabWidthPx > 0f) {
+                        val minOffset = -selectedTab.ordinal * tabWidthPx
+                        val maxOffset = (tabCount - 1 - selectedTab.ordinal) * tabWidthPx
+                        dragOffsetPx = (dragOffsetPx + dragAmount).coerceIn(minOffset, maxOffset)
+                        val stretchTarget = (stretchAnim.value * 0.68f + abs(dragAmount) * 0.62f)
+                            .coerceAtMost(with(density) { 34.dp.toPx() })
+                        scope.launch { stretchAnim.snapTo(stretchTarget) }
+                        scope.launch { offsetAnimation.snapTo(offsetAnimation.value + dragAmount) }
+                    }
+                    change.consume()
+                }
+            }
+            .width(IntrinsicSize.Min),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        @Composable
+        fun RowScope.TabItems(tint: Color) {
+            KopTab.entries.forEach { tab ->
+                Column(
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = if (showLabels) 76.dp else 62.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            scope.launch {
+                                indicatorPosition.stop()
+                                indicatorPosition.animateTo(
+                                    tab.ordinal.toFloat(),
+                                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                                )
+                            }
+                            onSelectedTabChange(tab)
+                        }
+                        .fillMaxSize()
+                        .weight(1f)
+                        .graphicsLayer {
+                            val scale = if (glassActive) lerp(1f, 1.18f, pressProgress) else 1f
+                            scaleX = scale
+                            scaleY = scale
+                        },
+                    verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(
+                        imageVector = tab.icon,
+                        contentDescription = tab.displayLabel(),
+                        tint = tint,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    AnimatedVisibility(visible = showLabels) {
+                        Text(
+                            text = tab.displayLabel(),
+                            color = tint,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
+
+        Row(
+            Modifier
+                .onGloballyPositioned { coords ->
+                    totalWidthPx = coords.size.width.toFloat()
+                    contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
+                }
+                .graphicsLayer { translationX = panelOffset }
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                )
+                .then(
+                    if (glassActive) {
+                        Modifier.kyantDrawBackdrop(
+                            backdrop = backdrop,
+                            shape = { CircleShape },
+                            effects = {
+                                kyantVibrancy()
+                                kyantBlur(8.dp.toPx())
+                                kyantLens(24.dp.toPx(), 24.dp.toPx())
                             },
-                            highlight = { Highlight.GlassStrokeMiddleLight },
-                            onDrawSurface = {
-                                drawRoundRect(Color.White.copy(alpha = 0.34f))
+                            highlight = { KyantHighlight.Default.copy(alpha = 1f) },
+                            shadow = {
+                                Shadow.Default.copy(
+                                    color = Color.Black.copy(if (isLight) 0.1f else 0.2f),
+                                )
                             },
+                            layerBlock = {
+                                val scale = lerp(1f, 1f + 16.dp.toPx() / size.width, pressProgress)
+                                scaleX = scale
+                                scaleY = scale
+                            },
+                            onDrawSurface = { drawRect(containerColor) },
+                        )
+                    } else {
+                        Modifier.background(containerColor, CircleShape)
+                    },
+                )
+                .height(64.dp)
+                .padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TabItems(MiuixTheme.colorScheme.onSurface)
+        }
+
+        Row(
+            Modifier
+                .clearAndSetSemantics {}
+                .alpha(0f)
+                .kyantLayerBackdrop(tabsBackdrop)
+                .graphicsLayer { translationX = panelOffset }
+                .then(
+                    if (glassActive) {
+                        Modifier.kyantDrawBackdrop(
+                            backdrop = backdrop,
+                            shape = { CircleShape },
+                            effects = {
+                                kyantVibrancy()
+                                kyantBlur(8.dp.toPx())
+                                kyantLens(24.dp.toPx() * pressProgress, 24.dp.toPx() * pressProgress)
+                            },
+                            highlight = { KyantHighlight.Default.copy(alpha = pressProgress) },
+                            onDrawSurface = { drawRect(containerColor) },
                         )
                     } else {
                         Modifier
                     },
-                ),
-            color = if (glassEnabled) Color.Transparent else MiuixTheme.colorScheme.surfaceContainer,
-            cornerRadius = 36.dp,
-            shadowElevation = if (glassEnabled) 0.dp else 1.dp,
-            showDivider = glassEnabled,
-            defaultWindowInsetsPadding = true,
-        ) {
-            KopTab.entries.forEach { tab ->
-                FloatingNavigationBarItem(
-                    selected = selectedTab == tab,
-                    onClick = { onSelectedTabChange(tab) },
-                    icon = tab.icon,
-                    label = tab.displayLabel(),
                 )
-            }
+                .height(itemHeight)
+                .padding(horizontal = 4.dp)
+                .graphicsLayer(colorFilter = ColorFilter.tint(MiuixTheme.colorScheme.primary)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TabItems(MiuixTheme.colorScheme.onSurface)
+        }
+
+        if (tabWidthPx > 0f) {
+            Box(
+                Modifier
+                    .padding(horizontal = 4.dp)
+                    .graphicsLayer {
+                        val progressOffset = indicatorIndex * tabWidthPx
+                        translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
+                    }
+                    .then(
+                        if (glassActive) {
+                            Modifier.kyantDrawBackdrop(
+                                backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                                shape = { CircleShape },
+                                effects = {
+                                    kyantLens(10.dp.toPx() * pressProgress, 14.dp.toPx() * pressProgress, true)
+                                },
+                                highlight = { KyantHighlight.Default.copy(alpha = pressProgress) },
+                                shadow = { Shadow(alpha = pressProgress) },
+                                innerShadow = {
+                                    KyantInnerShadow(
+                                        radius = 8.dp * pressProgress,
+                                        alpha = pressProgress,
+                                    )
+                                },
+                                layerBlock = {
+                                    scaleX = 1f + stretchAnim.value / size.width
+                                    scaleY = 1f - (stretchAnim.value / size.width * 0.24f).coerceIn(0f, 0.16f)
+                                },
+                                onDrawSurface = {
+                                    drawRect(
+                                        color = if (isLight) Color.Black.copy(0.1f) else Color.White.copy(0.1f),
+                                        alpha = 1f - pressProgress,
+                                    )
+                                    drawRect(Color.Black.copy(alpha = 0.03f * pressProgress))
+                                },
+                            )
+                        } else {
+                            Modifier.background(MiuixTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
+                        },
+                    )
+                    .height(itemHeight)
+                    .width(with(density) { tabWidthPx.toDp() }),
+            )
         }
     }
 }
