@@ -120,9 +120,8 @@ import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private enum class KopTab(val label: String, val icon: ImageVector) {
-    Courses("课程表", MiuixIcons.Months),
+    Courses("课程", MiuixIcons.Months),
     Rooms("教室", Icons.Outlined.Apartment),
-    Grades("成绩与考试", Icons.Outlined.Assignment),
     EntryQr("入校码", Icons.Outlined.QrCode2),
     Settings("设置", MiuixIcons.Settings),
 }
@@ -139,9 +138,8 @@ private enum class KopPane {
 }
 
 private fun KopTab.displayLabel(): String = when (this) {
-    KopTab.Courses -> "课程表"
+    KopTab.Courses -> "课程"
     KopTab.Rooms -> "教室"
-    KopTab.Grades -> "成绩与考试"
     KopTab.EntryQr -> "入校码"
     KopTab.Settings -> "设置"
 }
@@ -376,13 +374,10 @@ private fun KopRootContent(
             KopTab.Courses -> KopCoursesHome(
                 bottomPadding = bottomPadding,
                 onOpenCourseTable = onOpenCourseTable,
-            )
-            KopTab.Rooms -> StudyRoomPage(onBack = {})
-            KopTab.Grades -> KopGradesHome(
-                bottomPadding = bottomPadding,
                 onOpenExams = onOpenExams,
                 onOpenGpa = onOpenGpa,
             )
+            KopTab.Rooms -> StudyRoomPage(onBack = {})
             KopTab.EntryQr -> EntryQrPage(onBack = {})
             KopTab.Settings -> SettingsPage(
                 themeMode = session.themeMode,
@@ -637,7 +632,7 @@ private fun FloatingKopNavigationBar(
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TabItems(MiuixTheme.colorScheme.onSurface)
+            TabItems(Color.Transparent)
         }
 
         if (tabWidthPx > 0f) {
@@ -737,13 +732,19 @@ private fun FloatingKopNavigationBar(
 }
 
 @Composable
-private fun KopCoursesHome(bottomPadding: Dp, onOpenCourseTable: () -> Unit) {
+private fun KopCoursesHome(
+    bottomPadding: Dp,
+    onOpenCourseTable: () -> Unit,
+    onOpenExams: () -> Unit,
+    onOpenGpa: () -> Unit,
+) {
     val app = LocalContext.current.applicationContext as RebuildApplication
     val vm: TjuViewModel = viewModel(factory = TjuViewModelFactory(app))
     val ui by vm.uiState.collectAsStateWithLifecycle()
     val customCoursesJson by app.sessionStore.customCoursesFlow.collectAsStateWithLifecycle(initialValue = "[]")
     val courses = remember(ui.courses, customCoursesJson) { ui.courses + customCoursesJson.decodeCustomCourses() }
     val currentWeek = rememberCurrentTeachingWeek(courses.maxTeachingWeek())
+    val exams = remember(ui.exams) { ui.exams.sortedForKop().take(3) }
     val nowMillis by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
             value = System.currentTimeMillis()
@@ -761,8 +762,8 @@ private fun KopCoursesHome(bottomPadding: Dp, onOpenCourseTable: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "课程表",
-                largeTitle = "课程表",
+                title = "课程",
+                largeTitle = "课程",
                 color = Color.Transparent,
                 titleColor = MiuixTheme.colorScheme.onBackground,
                 scrollBehavior = scrollBehavior,
@@ -831,6 +832,62 @@ private fun KopCoursesHome(bottomPadding: Dp, onOpenCourseTable: () -> Unit) {
                             )
                         },
                         onClick = onOpenCourseTable,
+                    )
+                }
+            }
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    if (exams.isEmpty()) {
+                        BasicComponent(title = "近期暂无考试", summary = "未安排时间地点的考试会在考试安排页展示")
+                    } else {
+                        exams.forEach { exam ->
+                            BasicComponent(
+                                title = exam.name.ifBlank { "未命名考试" },
+                                summary = listOf(
+                                    exam.date.ifBlank { "时间未安排" },
+                                    exam.arrange.ifBlank { "场次未安排" },
+                                    exam.location.ifBlank { "地点未安排" },
+                                ).joinToString(" · "),
+                                startAction = {
+                                    Icon(
+                                        Icons.Outlined.Assignment,
+                                        contentDescription = null,
+                                        tint = MiuixTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(end = 16.dp),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    BasicComponent(
+                        title = "考试安排",
+                        summary = "查看全部考试与未安排考试",
+                        startAction = {
+                            Icon(
+                                Icons.Outlined.Assignment,
+                                contentDescription = null,
+                                tint = MiuixTheme.colorScheme.onBackground,
+                                modifier = Modifier.padding(end = 16.dp),
+                            )
+                        },
+                        onClick = onOpenExams,
+                    )
+                    BasicComponent(
+                        title = "成绩",
+                        summary = ui.gpaTotal?.let { "加权 ${it.displayScore} · 绩点 ${it.gpa}" } ?: "查看每学期成绩",
+                        startAction = {
+                            Icon(
+                                MiuixIcons.Contacts,
+                                contentDescription = null,
+                                tint = MiuixTheme.colorScheme.onBackground,
+                                modifier = Modifier.padding(end = 16.dp),
+                            )
+                        },
+                        onClick = onOpenGpa,
                     )
                 }
             }
