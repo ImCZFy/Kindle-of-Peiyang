@@ -26,10 +26,12 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import me.tju244.kop.auth.data.AuthRepository
 
 class TjuAuthRepository(
     private val api: TjuApi,
     private val sessionStore: SessionStore,
+    private val authRepository: AuthRepository,
 ) {
     private val gson = Gson()
     private val cookieJar = InMemoryCookieJar()
@@ -86,6 +88,7 @@ class TjuAuthRepository(
     }
 
     private suspend fun fetch(username: String, password: String): TjuClassesBundle {
+        refreshSemesterInfo()
         debug("请求 TJU 教务聚合接口")
         val root = api.getClasses(username, password)
         val code = root.intOrNull("code") ?: root.intOrNull("error_code") ?: 200
@@ -691,6 +694,16 @@ class TjuAuthRepository(
         TjuDebugLog.add(message)
     }
 
+    private suspend fun refreshSemesterInfo() {
+        authRepository.semester()
+            .onSuccess { semester ->
+                debug("学期信息：${semester.semesterName.orEmpty()}，开学 ${semester.semesterStartAt.orEmpty()}")
+            }
+            .onFailure { error ->
+                debug("学期信息刷新失败：${error.message ?: error::class.java.simpleName}")
+            }
+    }
+
     private fun String.maskForLog(): String {
         if (length <= 2) return "***"
         return take(2) + "***" + takeLast(1)
@@ -724,4 +737,3 @@ private class InMemoryCookieJar : CookieJar {
             .flatten()
     }
 }
-

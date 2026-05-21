@@ -116,6 +116,7 @@ fun CourseSchedulePage(onBack: () -> Unit) {
     val vm: TjuViewModel = viewModel(factory = TjuViewModelFactory(app))
     val ui by vm.uiState.collectAsStateWithLifecycle()
     val customCoursesJson by app.sessionStore.customCoursesFlow.collectAsStateWithLifecycle(initialValue = "[]")
+    val semesterStartTimestamp by app.sessionStore.semesterStartTimestampFlow.collectAsStateWithLifecycle(initialValue = 0L)
     val customCourses = remember(customCoursesJson) { customCoursesJson.decodeCustomCourses() }
     val courses = remember(ui.courses, customCourses) { ui.courses + customCourses }
     val scope = rememberCoroutineScope()
@@ -127,6 +128,7 @@ fun CourseSchedulePage(onBack: () -> Unit) {
 
     CourseScheduleTablePage(
         courses = courses,
+        semesterStartTimestamp = semesterStartTimestamp,
         onBack = onBack,
         onOpenCourse = { selectedSlot = it },
         onAddCustomCourse = { addTarget = it },
@@ -207,6 +209,7 @@ fun CourseSchedulePage(onBack: () -> Unit) {
 @Composable
 private fun CourseScheduleTablePage(
     courses: List<TjuCourseDto>,
+    semesterStartTimestamp: Long,
     onBack: () -> Unit,
     onOpenCourse: (CourseSlot) -> Unit,
     onAddCustomCourse: (CustomCourseTarget) -> Unit,
@@ -214,7 +217,7 @@ private fun CourseScheduleTablePage(
     BackHandler { onBack() }
     val scrollBehavior = MiuixScrollBehavior()
     val maxWeek = courses.maxTeachingWeek()
-    val initialWeek = rememberCurrentTeachingWeek(maxWeek)
+    val initialWeek = rememberCurrentTeachingWeek(maxWeek, semesterStartTimestamp)
     val scope = rememberCoroutineScope()
     val weekListState = rememberLazyListState(
         initialFirstVisibleItemIndex = (initialWeek - 3).coerceIn(0, (maxWeek - 1).coerceAtLeast(0)),
@@ -315,7 +318,13 @@ private fun CourseScheduleTablePage(
                             Text("第 ${week} 周暂无课程安排", color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                         }
                     } else {
-                        CourseGrid(week = week, slots = slots, onOpenCourse = onOpenCourse, onAddCustomCourse = onAddCustomCourse)
+                        CourseGrid(
+                            week = week,
+                            semesterStartTimestamp = semesterStartTimestamp,
+                            slots = slots,
+                            onOpenCourse = onOpenCourse,
+                            onAddCustomCourse = onAddCustomCourse,
+                        )
                     }
                 }
             }
@@ -326,6 +335,7 @@ private fun CourseScheduleTablePage(
 @Composable
 private fun CourseGrid(
     week: Int,
+    semesterStartTimestamp: Long,
     slots: List<CourseSlot>,
     onOpenCourse: (CourseSlot) -> Unit,
     onAddCustomCourse: (CustomCourseTarget) -> Unit,
@@ -341,7 +351,7 @@ private fun CourseGrid(
         Row(modifier = Modifier.fillMaxWidth().padding(start = 58.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf("一", "二", "三", "四", "五", "六", "日").forEachIndexed { index, label ->
                 Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(weekDayMonthDay(week, index + 1), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontSize = 10.sp, maxLines = 1)
+                    Text(weekDayMonthDay(week, index + 1, semesterStartTimestamp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary, fontSize = 10.sp, maxLines = 1)
                     Text("周$label", color = MiuixTheme.colorScheme.onBackground, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -1581,24 +1591,40 @@ fun List<TjuCourseDto>.maxTeachingWeek(): Int {
 }
 
 @Composable
-fun rememberCurrentTeachingWeek(maxWeek: Int): Int = remember(maxWeek) {
-    calculateCurrentTeachingWeek(maxWeek)
+fun rememberCurrentTeachingWeek(maxWeek: Int, semesterStartTimestamp: Long = 0L): Int = remember(maxWeek, semesterStartTimestamp) {
+    calculateCurrentTeachingWeek(maxWeek, semesterStartTimestamp)
 }
 
-private fun calculateCurrentTeachingWeek(maxWeek: Int): Int {
+private fun calculateCurrentTeachingWeek(maxWeek: Int, semesterStartTimestamp: Long = 0L): Int {
     val now = Calendar.getInstance()
-    val year = now.get(Calendar.YEAR)
-    val candidates = listOf(
-        termStart(year - 1, Calendar.SEPTEMBER, 1),
-        termStart(year, Calendar.FEBRUARY, 17),
-        termStart(year, Calendar.SEPTEMBER, 1),
-    ).filter { !it.after(now) }
-    val start = candidates.maxByOrNull { it.timeInMillis } ?: candidates.firstOrNull() ?: now
+    val start = semesterStartCalendar(semesterStartTimestamp) ?: fallbackTermStart(now)
     val days = TimeUnit.MILLISECONDS.toDays(now.timeInMillis - start.timeInMillis)
     return (days / 7 + 1).toInt().coerceIn(1, maxWeek.coerceAtLeast(1))
 }
 
-private fun termStart(year: Int, month: Int, day: Int): Calendar {
+private fun semesterStartCalendar(timestamp: Long): Calendar? {
+    if (timestamp <= 0L) return null
+    val millis = if (timestamp < 10_000_000_000L) timestamp * 1000L else timestamp
+    return Calendar.getInstance().apply {
+        timeInMillis = millis
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+}
+
+private fun fallbackTermStart(now: Calendar): Calendar {
+    val year = now.get(Calendar.YEAR)
+    val candidates = listOf(
+        fixedTermStart(year - 1, Calendar.SEPTEMBER, 1),
+        fixedTermStart(year, Calendar.FEBRUARY, 17),
+        fixedTermStart(year, Calendar.SEPTEMBER, 1),
+    ).filter { !it.after(now) }
+    return candidates.maxByOrNull { it.timeInMillis } ?: now
+}
+
+private fun fixedTermStart(year: Int, month: Int, day: Int): Calendar {
     return Calendar.getInstance().apply {
         clear()
         set(year, month, day)
@@ -1608,14 +1634,9 @@ private fun termStart(year: Int, month: Int, day: Int): Calendar {
     }
 }
 
-private fun weekDayMonthDay(week: Int, weekday: Int): String {
+private fun weekDayMonthDay(week: Int, weekday: Int, semesterStartTimestamp: Long = 0L): String {
     val now = Calendar.getInstance()
-    val year = now.get(Calendar.YEAR)
-    val start = listOf(
-        termStart(year - 1, Calendar.SEPTEMBER, 1),
-        termStart(year, Calendar.FEBRUARY, 17),
-        termStart(year, Calendar.SEPTEMBER, 1),
-    ).filter { !it.after(now) }.maxByOrNull { it.timeInMillis } ?: now
+    val start = semesterStartCalendar(semesterStartTimestamp) ?: fallbackTermStart(now)
     val day = start.clone() as Calendar
     day.add(Calendar.DAY_OF_MONTH, (week - 1).coerceAtLeast(0) * 7 + (weekday - 1).coerceIn(0, 6))
     return "${(day.get(Calendar.MONTH) + 1).toString().padStart(2, '0')}-${day.get(Calendar.DAY_OF_MONTH).toString().padStart(2, '0')}"

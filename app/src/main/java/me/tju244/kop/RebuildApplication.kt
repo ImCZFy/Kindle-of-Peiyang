@@ -39,7 +39,7 @@ class RebuildApplication : Application() {
         authRepository = AuthRepository(authApi, sessionStore)
 
         val tjuApi = ApiFactory.create("https://learning.twt.edu.cn/", cacheDir = cacheDir).create(TjuApi::class.java)
-        tjuAuthRepository = TjuAuthRepository(tjuApi, sessionStore)
+        tjuAuthRepository = TjuAuthRepository(tjuApi, sessionStore, authRepository)
         entryQrRepository = EntryQrRepository(sessionStore)
     }
 }

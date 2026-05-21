@@ -715,8 +715,9 @@ private fun KopCoursesHome(
     val vm: TjuViewModel = viewModel(factory = TjuViewModelFactory(app))
     val ui by vm.uiState.collectAsStateWithLifecycle()
     val customCoursesJson by app.sessionStore.customCoursesFlow.collectAsStateWithLifecycle(initialValue = "[]")
+    val semesterStartTimestamp by app.sessionStore.semesterStartTimestampFlow.collectAsStateWithLifecycle(initialValue = 0L)
     val courses = remember(ui.courses, customCoursesJson) { ui.courses + customCoursesJson.decodeCustomCourses() }
-    val currentWeek = rememberCurrentTeachingWeek(courses.maxTeachingWeek())
+    val currentWeek = rememberCurrentTeachingWeek(courses.maxTeachingWeek(), semesterStartTimestamp)
     val exams = remember(ui.exams) { ui.exams.sortedForKop().take(3) }
     val nowMillis by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {

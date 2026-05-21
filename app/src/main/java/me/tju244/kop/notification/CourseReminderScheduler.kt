@@ -30,7 +30,11 @@ object CourseReminderScheduler {
         }
         val classesBundle = bundle ?: readCachedBundle(app)
         val courses = classesBundle?.courses.orEmpty() + readCustomCourses(app)
+        val semesterStartTimestamp = store.currentSemesterStartTimestamp()
         CourseReminderDebugLog.add("课程数据：教务 ${classesBundle?.courses.orEmpty().size}，自定义 ${courses.count { it.type == -1 }}")
+        if (semesterStartTimestamp > 0L) {
+            CourseReminderDebugLog.add("学期起点：${store.currentSemesterStartAt().ifBlank { semesterStartTimestamp.toString() }}")
+        }
         if (courses.isEmpty()) {
             CourseReminderDebugLog.add("没有课程数据，取消下一节提醒")
             cancel(app)
@@ -38,7 +42,7 @@ object CourseReminderScheduler {
         }
         val now = System.currentTimeMillis()
         val lastNotifiedKey = app.reminderPrefs().getString(KEY_LAST_NOTIFIED, null)
-        val payload = courseReminderPayloads(courses = courses, daysAhead = 30)
+        val payload = courseReminderPayloads(courses = courses, daysAhead = 30, semesterStartTimestamp = semesterStartTimestamp)
             .firstOrNull { candidate ->
                 val alreadyNotifiedInReminderWindow = candidate.reminderKey() == lastNotifiedKey &&
                     calculateReminderTriggerMillis(candidate) <= now

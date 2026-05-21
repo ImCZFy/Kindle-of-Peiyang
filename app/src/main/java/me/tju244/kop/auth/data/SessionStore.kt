@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +22,9 @@ class SessionStore(private val context: Context) {
     private val tjuUsernameKey = stringPreferencesKey("tju_username")
     private val tjuPasswordKey = stringPreferencesKey("tju_password")
     private val tjuClassesCacheKey = stringPreferencesKey("tju_classes_cache")
+    private val semesterStartTimestampKey = longPreferencesKey("semester_start_timestamp")
+    private val semesterNameKey = stringPreferencesKey("semester_name")
+    private val semesterStartAtKey = stringPreferencesKey("semester_start_at")
     private val themeModeKey = intPreferencesKey("theme_mode")
     private val fontModeKey = intPreferencesKey("font_mode")
     private val bottomBarLabelModeKey = intPreferencesKey("bottom_bar_label_mode")
@@ -54,6 +58,18 @@ class SessionStore(private val context: Context) {
 
     val tjuClassesCacheFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
         prefs[tjuClassesCacheKey] ?: ""
+    }
+
+    val semesterStartTimestampFlow: Flow<Long> = context.sessionDataStore.data.map { prefs: Preferences ->
+        prefs[semesterStartTimestampKey] ?: 0L
+    }
+
+    val semesterNameFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
+        prefs[semesterNameKey] ?: ""
+    }
+
+    val semesterStartAtFlow: Flow<String> = context.sessionDataStore.data.map { prefs: Preferences ->
+        prefs[semesterStartAtKey] ?: ""
     }
 
     val themeModeFlow: Flow<Int> = context.sessionDataStore.data.map { prefs: Preferences ->
@@ -118,6 +134,9 @@ class SessionStore(private val context: Context) {
     suspend fun currentTjuUsername(): String = tjuUsernameFlow.first()
     suspend fun currentTjuPassword(): String = tjuPasswordFlow.first()
     suspend fun currentTjuClassesCache(): String = tjuClassesCacheFlow.first()
+    suspend fun currentSemesterStartTimestamp(): Long = semesterStartTimestampFlow.first()
+    suspend fun currentSemesterName(): String = semesterNameFlow.first()
+    suspend fun currentSemesterStartAt(): String = semesterStartAtFlow.first()
     suspend fun currentCourseNotificationEnabled(): Boolean = courseNotificationEnabledFlow.first()
     suspend fun currentCourseLiveUpdateEnabled(): Boolean = courseLiveUpdateEnabledFlow.first()
     suspend fun currentMiIslandNotificationEnabled(): Boolean = miIslandNotificationEnabledFlow.first()
@@ -173,11 +192,22 @@ class SessionStore(private val context: Context) {
         context.sessionDataStore.edit { it[tjuClassesCacheKey] = cache }
     }
 
+    suspend fun saveSemesterInfo(timestamp: Long?, name: String?, startAt: String?) {
+        context.sessionDataStore.edit {
+            timestamp?.takeIf { value -> value > 0L }?.let { value -> it[semesterStartTimestampKey] = value }
+            if (!name.isNullOrBlank()) it[semesterNameKey] = name
+            if (!startAt.isNullOrBlank()) it[semesterStartAtKey] = startAt
+        }
+    }
+
     suspend fun clearTjuCredentials() {
         context.sessionDataStore.edit {
             it.remove(tjuUsernameKey)
             it.remove(tjuPasswordKey)
             it.remove(tjuClassesCacheKey)
+            it.remove(semesterStartTimestampKey)
+            it.remove(semesterNameKey)
+            it.remove(semesterStartAtKey)
         }
     }
 
@@ -229,6 +259,9 @@ class SessionStore(private val context: Context) {
             it.remove(tjuUsernameKey)
             it.remove(tjuPasswordKey)
             it.remove(tjuClassesCacheKey)
+            it.remove(semesterStartTimestampKey)
+            it.remove(semesterNameKey)
+            it.remove(semesterStartAtKey)
         }
     }
 }

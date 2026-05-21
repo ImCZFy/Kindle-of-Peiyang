@@ -16,8 +16,8 @@ android {
         applicationId = "me.tju244.kop"
         minSdk = 26
         targetSdk = 37
-        versionCode = 18
-        versionName = "6.3.15"
+        versionCode = 19
+        versionName = "6.3.16"
     }
 
     if (
@@ -87,4 +87,3 @@ dependencies {
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
 }
-

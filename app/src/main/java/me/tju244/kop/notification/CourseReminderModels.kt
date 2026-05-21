@@ -56,20 +56,22 @@ private val sectionTimes = mapOf(
 fun nextCourseReminderPayload(
     courses: List<TjuCourseDto>,
     now: LocalDateTime = LocalDateTime.now(),
+    semesterStartTimestamp: Long = 0L,
 ): CourseReminderPayload? {
-    return courseReminderPayloads(courses = courses, now = now, daysAhead = 30).firstOrNull()
+    return courseReminderPayloads(courses = courses, now = now, daysAhead = 30, semesterStartTimestamp = semesterStartTimestamp).firstOrNull()
 }
 
 fun courseReminderPayloads(
     courses: List<TjuCourseDto>,
     now: LocalDateTime = LocalDateTime.now(),
     daysAhead: Int = 30,
+    semesterStartTimestamp: Long = 0L,
 ): List<CourseReminderPayload> {
     val nowMillis = now.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
     val maxWeek = courses.maxTeachingWeekForReminder()
     val days = (0 until daysAhead.coerceAtLeast(1)).map { now.toLocalDate().plusDays(it.toLong()) }
     return days.flatMap { date ->
-        val week = calculateTeachingWeekForReminder(maxWeek, date)
+        val week = calculateTeachingWeekForReminder(maxWeek, date, semesterStartTimestamp)
         val weekday = date.dayOfWeek.value
         courses.flatMap { course ->
             course.arrangeList.mapNotNull { arrange ->
@@ -146,7 +148,12 @@ private fun List<TjuCourseDto>.maxTeachingWeekForReminder(): Int {
     return (max ?: 18).coerceIn(1, 30)
 }
 
-private fun calculateTeachingWeekForReminder(maxWeek: Int, today: LocalDate): Int {
+private fun calculateTeachingWeekForReminder(maxWeek: Int, today: LocalDate, semesterStartTimestamp: Long = 0L): Int {
+    val termStartFromServer = semesterStartTimestamp.toLocalTermDate()
+    if (termStartFromServer != null) {
+        val week = ChronoUnit.DAYS.between(termStartFromServer, today).toInt() / 7 + 1
+        return week.coerceIn(1, maxWeek.coerceAtLeast(1))
+    }
     val candidates = listOf(
         LocalDate.of(today.year - 1, 9, 1),
         LocalDate.of(today.year, 2, 17),
@@ -159,5 +166,13 @@ private fun calculateTeachingWeekForReminder(maxWeek: Int, today: LocalDate): In
     val termStart = candidates.maxOrNull() ?: today
     val week = ChronoUnit.DAYS.between(termStart, today).toInt() / 7 + 1
     return week.coerceIn(1, maxWeek.coerceAtLeast(1))
+}
+
+private fun Long.toLocalTermDate(): LocalDate? {
+    if (this <= 0L) return null
+    val millis = if (this < 10_000_000_000L) this * 1000L else this
+    return java.time.Instant.ofEpochMilli(millis)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
 }
 

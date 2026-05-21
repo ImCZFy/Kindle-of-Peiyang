@@ -37,7 +37,13 @@ class AuthRepository(
         if (res.error_code != 0 || res.result == null) {
             error(res.message ?: "获取学期信息失败")
         }
-        res.result
+        val semester = res.result
+        sessionStore.saveSemesterInfo(
+            timestamp = semester.semesterStartTimestamp,
+            name = semester.semesterName,
+            startAt = semester.semesterStartAt,
+        )
+        semester
     }
 
     suspend fun requestLoginCode(phone: String): Result<Unit> = runCatching {
