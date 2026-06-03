@@ -16,8 +16,8 @@ android {
         applicationId = "me.tju244.kop"
         minSdk = 26
         targetSdk = 37
-        versionCode = 19
-        versionName = "6.3.16"
+        versionCode = 20
+        versionName = "6.3.17"
     }
 
     if (

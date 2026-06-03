@@ -226,6 +226,13 @@ private fun CourseScheduleTablePage(
         initialPage = (initialWeek - 1).coerceIn(0, maxWeek - 1),
         pageCount = { maxWeek },
     )
+    LaunchedEffect(initialWeek, maxWeek) {
+        val targetPage = (initialWeek - 1).coerceIn(0, (maxWeek - 1).coerceAtLeast(0))
+        if (pagerState.currentPage != targetPage) {
+            pagerState.scrollToPage(targetPage)
+        }
+        weekListState.scrollToItem((initialWeek - 3).coerceIn(0, (maxWeek - 1).coerceAtLeast(0)))
+    }
     LaunchedEffect(pagerState.currentPage, maxWeek) {
         val target = (pagerState.currentPage - 2).coerceIn(0, (maxWeek - 1).coerceAtLeast(0))
         weekListState.animateScrollToItem(target)
